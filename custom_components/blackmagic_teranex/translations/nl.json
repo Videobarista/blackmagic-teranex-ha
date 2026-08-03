@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Blackmagic Teranex",
+        "description": "Voer het IP-adres van je Teranex in. Het Ethernet-protocol luistert op TCP-poort 9800.",
+        "data": {
+          "host": "Host",
+          "port": "Poort"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbinden mislukt. Controleer het IP-adres en of de Teranex aan staat en op het netwerk zit."
+    },
+    "abort": {
+      "already_configured": "Deze Teranex is al geconfigureerd."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "model_name": { "name": "Model" },
+      "software_version": { "name": "Softwareversie" },
+      "fpga_version": { "name": "FPGA-versie" },
+      "protocol_version": { "name": "Protocolversie" },
+      "friendly_name": { "name": "Weergavenaam" },
+      "ip_address": { "name": "IP-adres" }
+    }
+  }
+}

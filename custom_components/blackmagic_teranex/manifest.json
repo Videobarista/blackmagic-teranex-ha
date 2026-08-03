@@ -1,0 +1,12 @@
+{
+  "domain": "blackmagic_teranex",
+  "name": "Blackmagic Teranex",
+  "codeowners": ["@HuisAutomatisering"],
+  "config_flow": true,
+  "documentation": "https://github.com/HuisAutomatisering/blackmagic-teranex-ha",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/HuisAutomatisering/blackmagic-teranex-ha/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
