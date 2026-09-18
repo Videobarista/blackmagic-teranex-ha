@@ -9,22 +9,34 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import TeranexConfigEntry
 from .const import (
+    AFD_INSERT_TYPES,
     ANALOG_OUTPUTS,
     ASPECT_RATIOS,
     ATTR_PRESET,
+    AUDIO_CHANNELS,
+    AUDIO_ROUTING_SOURCES,
     AUDIO_SOURCES,
     CONF_VIDEO_MODES,
     DEFAULT_VIDEO_MODES,
+    NO_SIGNAL_OUTPUTS,
     SERVICE_SAVE_PRESET,
+    TEST_PATTERNS,
+    TIMECODE_DROP_FRAME,
+    TIMECODE_MODES,
+    TIMECODE_START_SOURCES,
     VIDEO_SOURCES,
 )
 from .entity import TeranexEntity
 from .protocol import (
+    BLOCK_ANCILLARY,
+    BLOCK_AUDIO,
     BLOCK_PRESET,
+    BLOCK_TEST_PATTERN,
     BLOCK_VIDEO_INPUT,
     BLOCK_VIDEO_OUTPUT,
     TeranexClient,
@@ -61,7 +73,7 @@ async def async_setup_entry(
             client,
             entry.entry_id,
             key="audio_source",
-            name="Audio input",
+            name="Audio source",
             block=BLOCK_VIDEO_INPUT,
             field="Audio source",
             options=AUDIO_SOURCES,
@@ -81,7 +93,7 @@ async def async_setup_entry(
             client,
             entry.entry_id,
             key="aspect_ratio",
-            name="Aspect ratio",
+            name="Output aspect ratio",
             block=BLOCK_VIDEO_OUTPUT,
             field="Aspect ratio",
             options=ASPECT_RATIOS,
@@ -91,15 +103,97 @@ async def async_setup_entry(
             client,
             entry.entry_id,
             key="analog_output",
-            name="Analogue output",
+            name="Output analogue",
             block=BLOCK_VIDEO_OUTPUT,
             field="Analog output",
             options=ANALOG_OUTPUTS,
             icon="mdi:video-output",
             enabled_default=False,
+            category=EntityCategory.CONFIG,
+        ),
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="test_pattern",
+            name="Test pattern",
+            block=BLOCK_TEST_PATTERN,
+            field="Output",
+            options=TEST_PATTERNS,
+            icon="mdi:test-tube",
+        ),
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="no_signal_output",
+            name="Test pattern on signal loss",
+            block=BLOCK_TEST_PATTERN,
+            field="No signal",
+            options=NO_SIGNAL_OUTPUTS,
+            icon="mdi:video-off",
+        ),
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="timecode_mode",
+            name="Timecode mode",
+            block=BLOCK_ANCILLARY,
+            field="Timecode mode",
+            options=TIMECODE_MODES,
+            icon="mdi:timer-outline",
+        ),
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="timecode_start_source",
+            name="Timecode start source",
+            block=BLOCK_ANCILLARY,
+            field="Timecode start source",
+            options=TIMECODE_START_SOURCES,
+            icon="mdi:timer-cog-outline",
+            category=EntityCategory.CONFIG,
+        ),
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="timecode_drop_frame",
+            name="Timecode drop frame",
+            block=BLOCK_ANCILLARY,
+            field="Timecode drop frame mode",
+            options=TIMECODE_DROP_FRAME,
+            icon="mdi:timer-sand",
+            enabled_default=False,
+            category=EntityCategory.CONFIG,
+        ),
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="afd_insert_type",
+            name="AFD insert",
+            block=BLOCK_ANCILLARY,
+            field="AFD insert type",
+            options=AFD_INSERT_TYPES,
+            icon="mdi:crop",
+            enabled_default=False,
+            category=EntityCategory.CONFIG,
         ),
         TeranexPresetSelect(client, entry.entry_id),
     ]
+
+    # Audio routing. AudioOut0 is output channel 1, and so on.
+    entities.extend(
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key=f"audio_out_{channel}",
+            name=f"Audio output {channel + 1}",
+            block=BLOCK_AUDIO,
+            field=f"AudioOut{channel}",
+            options=AUDIO_ROUTING_SOURCES,
+            icon="mdi:call-split",
+            enabled_default=channel < 2,
+        )
+        for channel in range(AUDIO_CHANNELS)
+    )
     async_add_entities(entities)
 
     platform = entity_platform.async_get_current_platform()
@@ -134,6 +228,7 @@ class TeranexSelect(TeranexEntity, SelectEntity):
         options: tuple[str, ...],
         icon: str | None = None,
         enabled_default: bool = True,
+        category: EntityCategory | None = None,
     ) -> None:
         """Initialise the select."""
         super().__init__(client, entry_id, key)
@@ -143,6 +238,7 @@ class TeranexSelect(TeranexEntity, SelectEntity):
         self._attr_name = name
         self._attr_icon = icon
         self._attr_entity_registry_enabled_default = enabled_default
+        self._attr_entity_category = category
 
     @property
     def options(self) -> list[str]:

@@ -11,7 +11,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import TeranexConfigEntry
 from .entity import TeranexEntity
-from .protocol import BLOCK_NOISE_REDUCTION, BLOCK_VIDEO_INPUT, TeranexClient
+from .protocol import (
+    BLOCK_ANCILLARY,
+    BLOCK_NOISE_REDUCTION,
+    BLOCK_VIDEO_INPUT,
+    TeranexClient,
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -34,6 +39,26 @@ SWITCHES: tuple[TeranexSwitchDescription, ...] = (
         translation_key="noise_reduction",
         block=BLOCK_NOISE_REDUCTION,
         field="Enabled",
+    ),
+    TeranexSwitchDescription(
+        key="noise_reduction_split_screen",
+        translation_key="noise_reduction_split_screen",
+        block=BLOCK_NOISE_REDUCTION,
+        field="Split screen",
+        entity_registry_enabled_default=False,
+    ),
+    TeranexSwitchDescription(
+        key="noise_reduction_red_overlay",
+        translation_key="noise_reduction_red_overlay",
+        block=BLOCK_NOISE_REDUCTION,
+        field="Red overlay",
+        entity_registry_enabled_default=False,
+    ),
+    TeranexSwitchDescription(
+        key="closed_captioning",
+        translation_key="closed_captioning",
+        block=BLOCK_ANCILLARY,
+        field="CC enabled",
     ),
     TeranexSwitchDescription(
         key="wide_sd_aspect",

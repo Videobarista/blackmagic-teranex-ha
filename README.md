@@ -13,8 +13,7 @@ Developed against a **Teranex 2D**.
 
 ## Status
 
-Working against a Teranex 2D: input and output selection, aspect ratio, proc
-amp, presets, signal sensors and switches.
+Stable, running against a Teranex 2D.
 
 ## Why local push
 
@@ -40,22 +39,70 @@ Enter the IP address of the unit. Port 9800 is the default.
 
 ## Entities
 
-| Entity | Type | Notes |
-| --- | --- | --- |
-| Video input | select | SDI, HDMI, Composite, Component |
-| Audio input | select | Embedded, AES, RCA, DB25 |
-| Output format | select | List is editable through the options flow |
-| Aspect ratio | select | Anamorphic, Letterbox, CentreCut, 14x9, Smart |
-| Analogue output | select | Composite or Component, disabled by default |
-| Preset | select | Recalls presets 1–6 by their stored names |
-| Gain, Black level, Saturation, Hue, Sharpness | number | Proc amp |
-| R-Y level, B-Y level | number | Proc amp, disabled by default |
-| Input auto detection, Noise reduction | switch | |
-| Wide SD source | switch | Disabled by default |
-| Input signal, Genlock locked, Timecode, Closed captions | binary sensor | Read-only |
-| Still frame, Optical module | binary sensor | Disabled by default |
-| Input format, Input pixel format | sensor | Only reported while a signal is present |
-| Model, Software version, FPGA version, Protocol version, Friendly name, IP address | sensor | Diagnostic |
+Around ninety entities. The ones you are least likely to need are disabled by
+default; enable them from the device page.
+
+Entity names are prefixed by function — `Proc amp`, `Video adjust`, `Audio`,
+`Noise reduction`, `Timecode`, `Captions` — because Home Assistant sorts a
+device page alphabetically. Set-and-forget settings sit under Configuration
+rather than Controls, so what is left in Controls is what you touch during a
+show.
+
+### Video
+
+| Entity | Type |
+| --- | --- |
+| Video input, Audio source | select |
+| Output format, Output aspect ratio, Output analogue | select |
+| Proc amp gain, black level, saturation, hue, sharpness, R-Y, B-Y | number |
+| Proc amp red, green and blue trim | number |
+| Video adjust luma and chroma clipping | number |
+| Video adjust fill luma, Cb and Cr | number |
+| Video input auto detection, wide SD source | switch |
+
+### Noise reduction
+
+| Entity | Type |
+| --- | --- |
+| Noise reduction | switch |
+| Noise reduction bias | number |
+| Split screen, Red overlay | switch |
+
+### Test pattern
+
+| Entity | Type |
+| --- | --- |
+| Test pattern | select |
+| Test pattern on signal loss | select |
+
+### Audio
+
+| Entity | Type |
+| --- | --- |
+| Audio output 1 to 16 | select |
+| Audio input level | number |
+| Audio delay | number |
+
+### Timecode and captions
+
+| Entity | Type |
+| --- | --- |
+| Timecode mode, start source, drop frame | select |
+| Timecode start value, jam sync value | text |
+| Timecode input and output line | number |
+| Captions insert | switch |
+| Captions input and output line | number |
+| AFD insert, AFD output line | select, number |
+
+### Status and diagnostics
+
+| Entity | Type |
+| --- | --- |
+| Input signal, Genlock locked, Timecode, Closed captions | binary sensor |
+| Still frame, Optical module | binary sensor |
+| Input format, Input pixel format | sensor |
+| Model, Software version, FPGA version, Protocol version, Friendly name, IP address | sensor |
+| Preset | select |
 
 ## Saving presets
 
@@ -74,6 +121,22 @@ data:
 The device never reports which preset is active, so the Preset entity shows
 the last preset recalled from Home Assistant and goes back to unknown when
 anyone recalls one from the front panel.
+
+## Test tone
+
+Not implemented. The protocol documents the test tone for the Teranex AV only.
+A 2D reports the field and accepts the command, but ignores it and reports
+`None` straight back, so an entity for it would only ever look broken.
+
+## Audio routing
+
+Output channel 1 is `AudioOut0` in the protocol, so the entity named *Audio
+output 1* writes `AudioOut0`. Sources are the 16 embedded inputs, the 8 Dolby
+decoded channels, and the built-in test tones. Only the first two output
+channels are enabled by default; enable the rest from the device page.
+
+Input level is shown in decibels. The device stores it in tenths of a decibel,
+which the integration converts in both directions.
 
 ## Output formats
 
@@ -116,6 +179,13 @@ logger:
 
 Unreachable devices log at debug level on purpose — a switched-off processor is
 a normal condition in a rack, not an error worth filling your log with.
+
+## Brand images
+
+Home Assistant 2026.3 and later reads icons and logos from
+`custom_components/blackmagic_teranex/brand/`. That folder is empty here: the
+Blackmagic Design and Teranex marks are not mine to redistribute. Drop your own
+`icon.png` (256x256) and `logo.png` in there and they show up in the interface.
 
 ## Security
 

@@ -52,5 +52,37 @@ ASPECT_RATIOS: tuple[str, ...] = (
 )
 ANALOG_OUTPUTS: tuple[str, ...] = ("Composite", "Component")
 
+TEST_PATTERNS: tuple[str, ...] = (
+    "None",
+    "Black",
+    "SMPTEBars",
+    "Bars",
+    "Multiburst",
+    "Grid",
+)
+NO_SIGNAL_OUTPUTS: tuple[str, ...] = ("Black", "Bars")
+TIMECODE_MODES: tuple[str, ...] = (
+    "Off",
+    "Input",
+    "InputRegen",
+    "Generate",
+    "JamSync",
+)
+TIMECODE_DROP_FRAME: tuple[str, ...] = ("DF", "NDF")
+TIMECODE_START_SOURCES: tuple[str, ...] = ("Input", "User")
+AFD_INSERT_TYPES: tuple[str, ...] = ("Off", "Auto", "Bypass")
+
+AUDIO_CHANNELS = 16
+# Sources that can be mapped to an output channel.
+AUDIO_ROUTING_SOURCES: tuple[str, ...] = (
+    *(f"AudioIn{index}" for index in range(1, 17)),
+    *(f"AudioDD{index}" for index in range(1, 9)),
+    "TT750",
+    "TT1500",
+    "TT3000",
+    "TT6000",
+    "TTMute",
+)
+
 SERVICE_SAVE_PRESET = "save_preset"
 ATTR_PRESET = "preset"

@@ -75,10 +75,10 @@
         "name": "Genlock vergrendeld"
       },
       "timecode_present": {
-        "name": "Timecode"
+        "name": "Timecode aanwezig"
       },
       "closed_captioning_present": {
-        "name": "Ondertiteling"
+        "name": "Ondertiteling aanwezig"
       },
       "still_frame_present": {
         "name": "Stilstaand beeld"
@@ -89,36 +89,107 @@
     },
     "number": {
       "proc_amp_gain": {
-        "name": "Gain"
+        "name": "Proc amp gain"
       },
       "proc_amp_black": {
-        "name": "Zwartniveau"
+        "name": "Proc amp zwartniveau"
       },
       "proc_amp_saturation": {
-        "name": "Verzadiging"
+        "name": "Proc amp verzadiging"
       },
       "proc_amp_hue": {
-        "name": "Kleurtoon"
+        "name": "Proc amp kleurtoon"
       },
       "proc_amp_ry": {
-        "name": "R-Y-niveau"
+        "name": "Proc amp R-Y-niveau"
       },
       "proc_amp_by": {
-        "name": "B-Y-niveau"
+        "name": "Proc amp B-Y-niveau"
       },
       "proc_amp_sharp": {
-        "name": "Scherpte"
+        "name": "Proc amp scherpte"
+      },
+      "adjust_red": {
+        "name": "Proc amp roodtrim"
+      },
+      "adjust_green": {
+        "name": "Proc amp groentrim"
+      },
+      "adjust_blue": {
+        "name": "Proc amp blauwtrim"
+      },
+      "luma_low": {
+        "name": "Video adjust luma ondergrens"
+      },
+      "luma_high": {
+        "name": "Video adjust luma bovengrens"
+      },
+      "chroma_low": {
+        "name": "Video adjust chroma ondergrens"
+      },
+      "chroma_high": {
+        "name": "Video adjust chroma bovengrens"
+      },
+      "aspect_fill_luma": {
+        "name": "Video adjust vulkleur luma"
+      },
+      "aspect_fill_cb": {
+        "name": "Video adjust vulkleur Cb"
+      },
+      "aspect_fill_cr": {
+        "name": "Video adjust vulkleur Cr"
+      },
+      "noise_reduction_bias": {
+        "name": "Ruisonderdrukking sterkte"
+      },
+      "audio_input_level": {
+        "name": "Audio-ingangsniveau"
+      },
+      "audio_delay": {
+        "name": "Audiovertraging"
+      },
+      "timecode_input_line": {
+        "name": "Timecode ingangsregel"
+      },
+      "timecode_output_line": {
+        "name": "Timecode uitgangsregel"
+      },
+      "cc_input_line": {
+        "name": "Ondertiteling ingangsregel"
+      },
+      "cc_output_line": {
+        "name": "Ondertiteling uitgangsregel"
+      },
+      "afd_output_line": {
+        "name": "AFD-uitgangsregel"
       }
     },
     "switch": {
       "auto_detection": {
-        "name": "Automatische ingangsdetectie"
+        "name": "Video-ingang automatische detectie"
       },
       "noise_reduction": {
         "name": "Ruisonderdrukking"
       },
+      "noise_reduction_split_screen": {
+        "name": "Ruisonderdrukking split screen"
+      },
+      "noise_reduction_red_overlay": {
+        "name": "Ruisonderdrukking rode overlay"
+      },
+      "closed_captioning": {
+        "name": "Ondertiteling invoegen"
+      },
       "wide_sd_aspect": {
-        "name": "Breedbeeld SD-bron"
+        "name": "Video-ingang breedbeeld SD-bron"
+      }
+    },
+    "text": {
+      "timecode_generate_value": {
+        "name": "Timecode startwaarde"
+      },
+      "timecode_jam_sync_value": {
+        "name": "Timecode jam sync-waarde"
       }
     }
   }
