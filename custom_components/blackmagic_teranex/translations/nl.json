@@ -17,14 +17,109 @@
       "already_configured": "Deze Teranex is al geconfigureerd."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Uitgangsformaten",
+        "description": "Kommagescheiden lijst met uitgangsformaten, precies zoals de Teranex ze rapporteert (bijvoorbeeld 1080p24, 1080i50). Het formaat dat nu actief is, staat er altijd bij.",
+        "data": {
+          "video_modes": "Uitgangsformaten"
+        }
+      }
+    }
+  },
+  "services": {
+    "save_preset": {
+      "name": "Preset opslaan",
+      "description": "Overschrijft een preset op de Teranex met alle huidige instellingen. Dit kan niet ongedaan worden gemaakt.",
+      "fields": {
+        "preset": {
+          "name": "Preset",
+          "description": "Presetnummer dat wordt overschreven, 1 tot en met 6."
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
-      "model_name": { "name": "Model" },
-      "software_version": { "name": "Softwareversie" },
-      "fpga_version": { "name": "FPGA-versie" },
-      "protocol_version": { "name": "Protocolversie" },
-      "friendly_name": { "name": "Weergavenaam" },
-      "ip_address": { "name": "IP-adres" }
+      "model_name": {
+        "name": "Model"
+      },
+      "software_version": {
+        "name": "Softwareversie"
+      },
+      "fpga_version": {
+        "name": "FPGA-versie"
+      },
+      "protocol_version": {
+        "name": "Protocolversie"
+      },
+      "friendly_name": {
+        "name": "Weergavenaam"
+      },
+      "ip_address": {
+        "name": "IP-adres"
+      },
+      "input_video_mode": {
+        "name": "Ingangsformaat"
+      },
+      "input_pixel_format": {
+        "name": "Pixelformaat ingang"
+      }
+    },
+    "binary_sensor": {
+      "signal_present": {
+        "name": "Ingangssignaal"
+      },
+      "genlock_locked": {
+        "name": "Genlock vergrendeld"
+      },
+      "timecode_present": {
+        "name": "Timecode"
+      },
+      "closed_captioning_present": {
+        "name": "Ondertiteling"
+      },
+      "still_frame_present": {
+        "name": "Stilstaand beeld"
+      },
+      "optical_module_present": {
+        "name": "Optische module"
+      }
+    },
+    "number": {
+      "proc_amp_gain": {
+        "name": "Gain"
+      },
+      "proc_amp_black": {
+        "name": "Zwartniveau"
+      },
+      "proc_amp_saturation": {
+        "name": "Verzadiging"
+      },
+      "proc_amp_hue": {
+        "name": "Kleurtoon"
+      },
+      "proc_amp_ry": {
+        "name": "R-Y-niveau"
+      },
+      "proc_amp_by": {
+        "name": "B-Y-niveau"
+      },
+      "proc_amp_sharp": {
+        "name": "Scherpte"
+      }
+    },
+    "switch": {
+      "auto_detection": {
+        "name": "Automatische ingangsdetectie"
+      },
+      "noise_reduction": {
+        "name": "Ruisonderdrukking"
+      },
+      "wide_sd_aspect": {
+        "name": "Breedbeeld SD-bron"
+      }
     }
   }
 }

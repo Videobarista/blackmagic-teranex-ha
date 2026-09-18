@@ -1,0 +1,216 @@
+"""Selects for the Blackmagic Teranex integration."""
+
+from __future__ import annotations
+
+import logging
+import voluptuous as vol
+
+from homeassistant.components.select import SelectEntity
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+from . import TeranexConfigEntry
+from .const import (
+    ANALOG_OUTPUTS,
+    ASPECT_RATIOS,
+    ATTR_PRESET,
+    AUDIO_SOURCES,
+    CONF_VIDEO_MODES,
+    DEFAULT_VIDEO_MODES,
+    SERVICE_SAVE_PRESET,
+    VIDEO_SOURCES,
+)
+from .entity import TeranexEntity
+from .protocol import (
+    BLOCK_PRESET,
+    BLOCK_VIDEO_INPUT,
+    BLOCK_VIDEO_OUTPUT,
+    TeranexClient,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+PRESET_COUNT = 6
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: TeranexConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the selects."""
+    client = entry.runtime_data
+
+    configured = entry.options.get(CONF_VIDEO_MODES)
+    video_modes = tuple(configured) if configured else DEFAULT_VIDEO_MODES
+
+    entities: list[TeranexEntity] = [
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="video_source",
+            name="Video input",
+            block=BLOCK_VIDEO_INPUT,
+            field="Video source",
+            options=VIDEO_SOURCES,
+            icon="mdi:import",
+        ),
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="audio_source",
+            name="Audio input",
+            block=BLOCK_VIDEO_INPUT,
+            field="Audio source",
+            options=AUDIO_SOURCES,
+            icon="mdi:volume-high",
+        ),
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="video_mode",
+            name="Output format",
+            block=BLOCK_VIDEO_OUTPUT,
+            field="Video mode",
+            options=video_modes,
+            icon="mdi:television",
+        ),
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="aspect_ratio",
+            name="Aspect ratio",
+            block=BLOCK_VIDEO_OUTPUT,
+            field="Aspect ratio",
+            options=ASPECT_RATIOS,
+            icon="mdi:aspect-ratio",
+        ),
+        TeranexSelect(
+            client,
+            entry.entry_id,
+            key="analog_output",
+            name="Analogue output",
+            block=BLOCK_VIDEO_OUTPUT,
+            field="Analog output",
+            options=ANALOG_OUTPUTS,
+            icon="mdi:video-output",
+            enabled_default=False,
+        ),
+        TeranexPresetSelect(client, entry.entry_id),
+    ]
+    async_add_entities(entities)
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        SERVICE_SAVE_PRESET,
+        {
+            vol.Required(ATTR_PRESET): vol.All(
+                cv.positive_int, vol.Range(min=1, max=PRESET_COUNT)
+            )
+        },
+        "async_save_preset",
+    )
+
+
+class TeranexSelect(TeranexEntity, SelectEntity):
+    """A setting with a fixed set of values.
+
+    The documented value list is not always what a given model and firmware
+    actually use, so whatever the device currently reports is merged into the
+    options. That keeps the entity usable even when the manual is wrong.
+    """
+
+    def __init__(
+        self,
+        client: TeranexClient,
+        entry_id: str,
+        *,
+        key: str,
+        name: str,
+        block: str,
+        field: str,
+        options: tuple[str, ...],
+        icon: str | None = None,
+        enabled_default: bool = True,
+    ) -> None:
+        """Initialise the select."""
+        super().__init__(client, entry_id, key)
+        self._block = block
+        self._field = field
+        self._base_options = options
+        self._attr_name = name
+        self._attr_icon = icon
+        self._attr_entity_registry_enabled_default = enabled_default
+
+    @property
+    def options(self) -> list[str]:
+        """Return the documented options plus whatever the device reports."""
+        options = list(self._base_options)
+        current = self._client.get(self._block, self._field)
+        if current and current not in options:
+            options.append(current)
+        return options
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the value the device last reported."""
+        return self._client.get(self._block, self._field)
+
+    async def async_select_option(self, option: str) -> None:
+        """Send the new value; the device reports the result itself."""
+        await self.async_send(self._block, {self._field: option})
+
+
+class TeranexPresetSelect(TeranexEntity, SelectEntity):
+    """Recall one of the six presets.
+
+    The device never reports which preset is active, so this entity shows the
+    last preset recalled through Home Assistant and nothing else. Recall it
+    from the front panel and this goes back to unknown, which is honest: the
+    protocol simply does not say.
+    """
+
+    _attr_name = "Preset"
+    _attr_icon = "mdi:playlist-play"
+
+    def __init__(self, client: TeranexClient, entry_id: str) -> None:
+        """Initialise the preset select."""
+        super().__init__(client, entry_id, "preset")
+        self._last_recalled: str | None = None
+
+    def _preset_names(self) -> list[str]:
+        """Return the six preset names as the device stores them."""
+        block = self._client.block(BLOCK_PRESET)
+        return [
+            block.get(f"PresetName{index}") or f"Preset {index + 1}"
+            for index in range(PRESET_COUNT)
+        ]
+
+    @property
+    def options(self) -> list[str]:
+        """Return the preset names."""
+        return self._preset_names()
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the last preset recalled from Home Assistant, if any."""
+        if self._last_recalled in self._preset_names():
+            return self._last_recalled
+        return None
+
+    async def async_select_option(self, option: str) -> None:
+        """Recall the chosen preset."""
+        names = self._preset_names()
+        if option not in names:
+            raise HomeAssistantError(f"Unknown preset: {option}")
+        number = names.index(option) + 1
+        await self.async_send(BLOCK_PRESET, {"Recall": str(number)})
+        self._last_recalled = option
+        self.async_write_ha_state()
+
+    async def async_save_preset(self, preset: int) -> None:
+        """Overwrite a preset with the current device settings."""
+        await self.async_send(BLOCK_PRESET, {"Save": str(preset)})
+        _LOGGER.debug("Teranex %s saved preset %s", self._client.host, preset)

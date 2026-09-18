@@ -2,11 +2,22 @@
 
 from __future__ import annotations
 
+import logging
+
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
 from .const import DOMAIN, MANUFACTURER
-from .protocol import BLOCK_DEVICE, BLOCK_NETWORK, TeranexClient
+from .protocol import (
+    BLOCK_DEVICE,
+    BLOCK_NETWORK,
+    TeranexClient,
+    TeranexCommandError,
+    TeranexConnectionError,
+)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class TeranexEntity(Entity):
@@ -40,6 +51,23 @@ class TeranexEntity(Entity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to push updates."""
-        self.async_on_remove(
-            self._client.add_listener(self.async_write_ha_state)
-        )
+        self.async_on_remove(self._client.add_listener(self.async_write_ha_state))
+
+    async def async_send(self, block: str, fields: dict[str, str]) -> None:
+        """Send a command and translate failures into user-facing errors.
+
+        No optimistic state is written. The device reports the new value in a
+        status block of its own, which is the only thing that moves an entity.
+        """
+        try:
+            await self._client.async_send(block, fields)
+        except TeranexCommandError as err:
+            _LOGGER.debug("Teranex rejected %s %s: %s", block, fields, err)
+            raise HomeAssistantError(
+                f"The Teranex rejected this setting: {fields}. "
+                "Your model or firmware may use a different value name."
+            ) from err
+        except TeranexConnectionError as err:
+            raise HomeAssistantError(
+                f"The Teranex at {self._client.host} did not respond."
+            ) from err

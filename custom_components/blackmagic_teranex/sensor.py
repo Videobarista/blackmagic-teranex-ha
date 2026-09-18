@@ -18,6 +18,7 @@ from .protocol import (
     BLOCK_DEVICE,
     BLOCK_NETWORK,
     BLOCK_PREAMBLE,
+    BLOCK_VIDEO_INPUT,
     TeranexClient,
 )
 
@@ -80,6 +81,19 @@ SENSORS: tuple[TeranexSensorDescription, ...] = (
         block=BLOCK_NETWORK,
         field="Friendly name",
         entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+    ),
+    TeranexSensorDescription(
+        key="input_video_mode",
+        translation_key="input_video_mode",
+        block=BLOCK_VIDEO_INPUT,
+        field="Video mode",
+    ),
+    TeranexSensorDescription(
+        key="input_pixel_format",
+        translation_key="input_pixel_format",
+        block=BLOCK_VIDEO_INPUT,
+        field="Video pixel format",
         entity_registry_enabled_default=False,
     ),
     TeranexSensorDescription(

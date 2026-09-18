@@ -13,8 +13,8 @@ Developed against a **Teranex 2D**.
 
 ## Status
 
-Stage 1 — connection layer and diagnostic sensors. Controls for input
-selection, output format, aspect ratio, proc amp and presets are in progress.
+Working against a Teranex 2D: input and output selection, aspect ratio, proc
+amp, presets, signal sensors and switches.
 
 ## Why local push
 
@@ -40,14 +40,52 @@ Enter the IP address of the unit. Port 9800 is the default.
 
 ## Entities
 
-| Entity | Notes |
-| --- | --- |
-| Model | Reported model name |
-| Software version | Firmware checksum, disabled by default |
-| FPGA version | Disabled by default |
-| Protocol version | Disabled by default |
-| Friendly name | Disabled by default |
-| IP address | Decoded from the device's 32-bit integer notation |
+| Entity | Type | Notes |
+| --- | --- | --- |
+| Video input | select | SDI, HDMI, Composite, Component |
+| Audio input | select | Embedded, AES, RCA, DB25 |
+| Output format | select | List is editable through the options flow |
+| Aspect ratio | select | Anamorphic, Letterbox, CentreCut, 14x9, Smart |
+| Analogue output | select | Composite or Component, disabled by default |
+| Preset | select | Recalls presets 1–6 by their stored names |
+| Gain, Black level, Saturation, Hue, Sharpness | number | Proc amp |
+| R-Y level, B-Y level | number | Proc amp, disabled by default |
+| Input auto detection, Noise reduction | switch | |
+| Wide SD source | switch | Disabled by default |
+| Input signal, Genlock locked, Timecode, Closed captions | binary sensor | Read-only |
+| Still frame, Optical module | binary sensor | Disabled by default |
+| Input format, Input pixel format | sensor | Only reported while a signal is present |
+| Model, Software version, FPGA version, Protocol version, Friendly name, IP address | sensor | Diagnostic |
+
+## Saving presets
+
+Recalling a preset is a normal select. Saving is the action
+`blackmagic_teranex.save_preset`, deliberately not a button: it overwrites
+every setting in that preset slot and cannot be undone.
+
+```yaml
+action: blackmagic_teranex.save_preset
+target:
+  entity_id: select.teranex_2d_preset
+data:
+  preset: 3
+```
+
+The device never reports which preset is active, so the Preset entity shows
+the last preset recalled from Home Assistant and goes back to unknown when
+anyone recalls one from the front panel.
+
+## Output formats
+
+The Teranex cannot list the formats it supports, so the integration ships a
+default set for the 2D. Trim it to what you actually use through the
+integration options, writing each format exactly as the device reports it
+(`1080p24`, not `1080p23.98`). The format currently active on the device is
+always offered, whatever the list says.
+
+If the device answers a setting with NACK, Home Assistant shows an error and
+the entity does not move. That usually means your model spells the value
+differently; turn on debug logging to see what it actually sends.
 
 ## Power state
 

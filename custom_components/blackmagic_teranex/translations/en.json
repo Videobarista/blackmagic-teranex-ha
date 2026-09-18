@@ -17,6 +17,29 @@
       "already_configured": "This Teranex is already configured."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Output formats",
+        "description": "Comma separated list of output formats to offer, written exactly as the Teranex reports them (for example 1080p24, 1080i50). The format currently active on the device is always available.",
+        "data": {
+          "video_modes": "Output formats"
+        }
+      }
+    }
+  },
+  "services": {
+    "save_preset": {
+      "name": "Save preset",
+      "description": "Overwrites a preset on the Teranex with all current settings. This cannot be undone.",
+      "fields": {
+        "preset": {
+          "name": "Preset",
+          "description": "Preset number to overwrite, 1 to 6."
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "model_name": { "name": "Model" },
@@ -24,7 +47,31 @@
       "fpga_version": { "name": "FPGA version" },
       "protocol_version": { "name": "Protocol version" },
       "friendly_name": { "name": "Friendly name" },
-      "ip_address": { "name": "IP address" }
+      "ip_address": { "name": "IP address" },
+      "input_video_mode": { "name": "Input format" },
+      "input_pixel_format": { "name": "Input pixel format" }
+    },
+    "binary_sensor": {
+      "signal_present": { "name": "Input signal" },
+      "genlock_locked": { "name": "Genlock locked" },
+      "timecode_present": { "name": "Timecode" },
+      "closed_captioning_present": { "name": "Closed captions" },
+      "still_frame_present": { "name": "Still frame" },
+      "optical_module_present": { "name": "Optical module" }
+    },
+    "number": {
+      "proc_amp_gain": { "name": "Gain" },
+      "proc_amp_black": { "name": "Black level" },
+      "proc_amp_saturation": { "name": "Saturation" },
+      "proc_amp_hue": { "name": "Hue" },
+      "proc_amp_ry": { "name": "R-Y level" },
+      "proc_amp_by": { "name": "B-Y level" },
+      "proc_amp_sharp": { "name": "Sharpness" }
+    },
+    "switch": {
+      "auto_detection": { "name": "Input auto detection" },
+      "noise_reduction": { "name": "Noise reduction" },
+      "wide_sd_aspect": { "name": "Wide SD source" }
     }
   }
 }
