@@ -15,6 +15,10 @@ Blocks look like::
 Commands use the same shape and are answered with a bare ACK or NACK. The ACK
 only means "understood" -- the actual truth arrives as a separate status block,
 so callers must never assume their write took effect.
+
+A device that is switched off or unplugged is a normal condition, not an
+integration failure: those paths log at debug level and surface as
+unavailable entities.
 """
 
 from __future__ import annotations
@@ -130,7 +134,6 @@ class TeranexClient:
         try:
             await asyncio.wait_for(self._ready.wait(), READY_TIMEOUT)
         except TimeoutError as err:
-            await self.async_close()
             raise TeranexConnectionError(
                 f"{self.host} accepted the connection but sent no device block"
             ) from err
@@ -142,7 +145,6 @@ class TeranexClient:
         try:
             await asyncio.wait_for(self._ready.wait(), READY_TIMEOUT)
         except TimeoutError as err:
-            await self.async_close()
             raise TeranexConnectionError(
                 f"No response from {self.host}:{self.port}"
             ) from err
@@ -150,7 +152,7 @@ class TeranexClient:
     async def async_close(self) -> None:
         """Tear everything down."""
         self._closing = True
-        if self._supervisor:
+        if self._supervisor is not None:
             self._supervisor.cancel()
             self._supervisor = None
         await self._disconnect()
@@ -184,7 +186,11 @@ class TeranexClient:
                     f"No reply to {block} from {self.host}"
                 ) from err
             except (OSError, ConnectionError) as err:
-                raise TeranexConnectionError(str(err)) from err
+                if waiter in self._waiters:
+                    self._waiters.remove(waiter)
+                raise TeranexConnectionError(
+                    f"Write to {self.host} failed: {err}"
+                ) from err
 
         if not accepted:
             raise TeranexCommandError(f"Device rejected: {block} {dict(fields)}")
@@ -198,31 +204,35 @@ class TeranexClient:
     # ------------------------------------------------------------------
 
     async def _supervise(self) -> None:
-        """Keep the connection up, reconnecting with backoff."""
+        """Keep the connection up, reconnecting with backoff.
+
+        A device that is off or unreachable is expected in this domain, so
+        failures here are debug level; the entities simply go unavailable.
+        """
         delay = RECONNECT_MIN
         while not self._closing:
             try:
                 await self._open()
+            except TeranexConnectionError as err:
+                _LOGGER.debug("Teranex %s not reachable: %s", self.host, err)
+            else:
                 delay = RECONNECT_MIN
-                # _reader_task lives until the connection drops.
-                if self._reader_task:
-                    await self._reader_task
-            except asyncio.CancelledError:
-                raise
-            except Exception as err:  # noqa: BLE001 - supervisor must not die
-                _LOGGER.debug("Teranex %s connection failed: %s", self.host, err)
+                reader_task = self._reader_task
+                if reader_task is not None:
+                    try:
+                        await reader_task
+                    except asyncio.CancelledError:
+                        if self._closing:
+                            raise
 
             if self._closing:
                 return
 
             await self._disconnect()
             _LOGGER.debug(
-                "Teranex %s disconnected, retrying in %.0fs", self.host, delay
+                "Teranex %s disconnected, retrying in %.0f s", self.host, delay
             )
-            try:
-                await asyncio.sleep(delay)
-            except asyncio.CancelledError:
-                raise
+            await asyncio.sleep(delay)
             delay = min(delay * 2, RECONNECT_MAX)
 
     async def _open(self) -> None:
@@ -248,10 +258,10 @@ class TeranexClient:
         self._connected = False
         self._ready.clear()
 
-        if self._ping_task:
+        if self._ping_task is not None:
             self._ping_task.cancel()
             self._ping_task = None
-        if self._reader_task:
+        if self._reader_task is not None:
             self._reader_task.cancel()
             self._reader_task = None
 
@@ -260,14 +270,17 @@ class TeranexClient:
             if not waiter.done():
                 waiter.cancel()
 
-        if self._writer is not None:
-            self._writer.close()
-            try:
-                await self._writer.wait_closed()
-            except (OSError, ConnectionError):
-                pass
+        writer = self._writer
         self._writer = None
         self._reader = None
+
+        if writer is not None:
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except (OSError, ConnectionError) as err:
+                # The peer is already gone; nothing left to clean up.
+                _LOGGER.debug("Teranex %s socket closed with %s", self.host, err)
 
         if was_connected:
             self._notify()
@@ -280,8 +293,9 @@ class TeranexClient:
                 await self.async_send("PING", {})
             except TeranexError as err:
                 _LOGGER.debug("Teranex %s keepalive failed: %s", self.host, err)
-                if self._reader_task:
-                    self._reader_task.cancel()
+                reader_task = self._reader_task
+                if reader_task is not None:
+                    reader_task.cancel()
                 return
 
     # ------------------------------------------------------------------
@@ -290,10 +304,12 @@ class TeranexClient:
 
     async def _read_loop(self) -> None:
         """Read and parse lines until the connection drops."""
-        assert self._reader is not None
+        reader = self._reader
+        if reader is None:
+            return
         while True:
             try:
-                raw = await self._reader.readline()
+                raw = await reader.readline()
             except (OSError, ConnectionError) as err:
                 _LOGGER.debug("Teranex %s read error: %s", self.host, err)
                 return
@@ -355,5 +371,5 @@ class TeranexClient:
         for callback in list(self._listeners):
             try:
                 callback()
-            except Exception:  # noqa: BLE001
-                _LOGGER.exception("Teranex listener raised")
+            except Exception:  # noqa: BLE001 - one bad listener must not stop the rest
+                _LOGGER.exception("Teranex %s listener raised", self.host)

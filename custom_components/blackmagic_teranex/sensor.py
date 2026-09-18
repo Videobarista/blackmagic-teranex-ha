@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 import ipaddress
+import logging
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 from homeassistant.core import HomeAssistant
@@ -20,12 +21,15 @@ from .protocol import (
     TeranexClient,
 )
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def _decode_ip(value: str) -> str | None:
     """Turn the device's 32-bit integer notation into dotted quad."""
     try:
         return str(ipaddress.IPv4Address(int(value)))
     except (ValueError, ipaddress.AddressValueError):
+        _LOGGER.debug("Cannot decode %r as an IPv4 address", value)
         return None
 
 
