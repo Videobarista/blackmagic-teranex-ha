@@ -1,12 +1,14 @@
 # Brand
 
-Brand images live in `custom_components/blackmagic_teranex/brand/`, which is
-where Home Assistant 2026.3 and later reads them from. See the README in that
-folder for the file names and sizes.
+`icon.png` (256x256) and `icon@2x.png` (512x512) are an original, generic
+design made for this project: a small 4:3 picture becoming a wide 16:9
+picture. It is not the Blackmagic Design logo.
 
-This folder is kept as a convenient place to park source material: vector
-files, press-kit downloads, or the untrimmed originals you resized from.
-Nothing in here is read by Home Assistant.
+The copies Home Assistant actually reads live in
+`custom_components/blackmagic_teranex/brand/`. This folder holds the same
+files as source material for anyone forking the project.
 
-No images are shipped with this repository. The Blackmagic Design and Teranex
-marks belong to Blackmagic Design.
+To use different artwork, replace the files in
+`custom_components/blackmagic_teranex/brand/` with your own PNGs of the same
+names and sizes and restart Home Assistant. The Blackmagic Design and Teranex
+names and marks belong to Blackmagic Design.

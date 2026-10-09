@@ -1,10 +1,13 @@
 # Blackmagic Teranex for Home Assistant
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
-[![Validate](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/validate.yml)
-[![CodeQL](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/codeql.yml/badge.svg)](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/codeql.yml)
+[![Ruff](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/ruff.yml/badge.svg?branch=main)](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/ruff.yml)
+[![Hassfest](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/hassfest.yml/badge.svg?branch=main)](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/hassfest.yml)
+[![HACS](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/hacs.yml/badge.svg?branch=main)](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/hacs.yml)
+[![CodeQL](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/Videobarista/blackmagic-teranex-ha?include_prereleases)](https://github.com/Videobarista/blackmagic-teranex-ha/releases)
+[![Latest release](https://img.shields.io/github/v/release/Videobarista/blackmagic-teranex-ha)](https://github.com/Videobarista/blackmagic-teranex-ha/releases)
+
+[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Videobarista&repository=blackmagic-teranex-ha&category=integration)
 
 Home Assistant custom integration for Blackmagic Design Teranex video
 processors, using the Teranex Ethernet Protocol on TCP port 9800.
@@ -36,6 +39,16 @@ HACS → Custom repositories → add this repository URL → category
 services → Add integration → *Blackmagic Teranex*.
 
 Enter the IP address of the unit. Port 9800 is the default.
+
+## Changing the IP address
+
+Settings → Devices & services → *Blackmagic Teranex* → three-dot menu on
+the entry → **Reconfigure**. Enter the new address; it is only saved once the
+unit answers on it, so a typo never breaks a working setup. Entities, history,
+dashboards and automations all stay as they are.
+
+The Teranex ships with DHCP enabled. Giving it a DHCP reservation, or a static
+address in Teranex Setup, saves you from doing this after every router restart.
 
 ## Entities
 
@@ -182,10 +195,11 @@ a normal condition in a rack, not an error worth filling your log with.
 
 ## Brand images
 
-Home Assistant 2026.3 and later reads icons and logos from
-`custom_components/blackmagic_teranex/brand/`. That folder is empty here: the
-Blackmagic Design and Teranex marks are not mine to redistribute. Drop your own
-`icon.png` (256x256) and `logo.png` in there and they show up in the interface.
+The integration ships its own icon in `custom_components/blackmagic_teranex/brand/`,
+which Home Assistant 2026.3 and later picks up automatically. It is an original,
+generic design — a 4:3 picture becoming a 16:9 picture — and not the
+Blackmagic Design logo. Replace `icon.png` (256x256) and `icon@2x.png`
+(512x512) with your own artwork if you prefer, then restart Home Assistant.
 
 ## Security
 

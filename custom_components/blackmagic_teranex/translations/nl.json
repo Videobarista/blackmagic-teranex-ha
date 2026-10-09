@@ -8,13 +8,22 @@
           "host": "Host",
           "port": "Poort"
         }
+      },
+      "reconfigure": {
+        "title": "Adres wijzigen",
+        "description": "Voer het nieuwe IP-adres van deze Teranex in. Het adres wordt pas opgeslagen als de unit daarop antwoordt; alle entiteiten, geschiedenis en automatiseringen blijven behouden.",
+        "data": {
+          "host": "Host",
+          "port": "Poort"
+        }
       }
     },
     "error": {
       "cannot_connect": "Verbinden mislukt. Controleer het IP-adres en of de Teranex aan staat en op het netwerk zit."
     },
     "abort": {
-      "already_configured": "Deze Teranex is al geconfigureerd."
+      "already_configured": "Een andere geconfigureerde Teranex gebruikt dit adres al.",
+      "reconfigure_successful": "Het adres is bijgewerkt."
     }
   },
   "options": {

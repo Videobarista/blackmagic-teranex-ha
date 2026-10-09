@@ -22,7 +22,7 @@ from .const import (
     DEFAULT_VIDEO_MODES,
     DOMAIN,
 )
-from .protocol import TeranexClient, TeranexConnectionError
+from .protocol import BLOCK_NETWORK, TeranexClient, TeranexConnectionError
 
 STEP_USER_SCHEMA = vol.Schema(
     {
@@ -32,8 +32,32 @@ STEP_USER_SCHEMA = vol.Schema(
 )
 
 
+def _unique_id(host: str, port: int) -> str:
+    """Build the unique ID for a host and port.
+
+    The Teranex reports no serial number or MAC address over its protocol, so
+    the address is the only stable identifier available. Entities are keyed
+    on the config entry ID instead, which is why changing the address through
+    reconfigure keeps every entity, its history and its automations intact.
+    """
+    return f"{host}:{port}"
+
+
+async def _async_probe(host: str, port: int) -> str:
+    """Connect once, read the initial dump and return a title for the entry.
+
+    Raises TeranexConnectionError when the device cannot be reached.
+    """
+    client = TeranexClient(host, port)
+    try:
+        await client.async_connect_once()
+        return client.get(BLOCK_NETWORK, "Friendly name") or client.model or DEFAULT_NAME
+    finally:
+        await client.async_close()
+
+
 class TeranexConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle the user-initiated config flow."""
+    """Handle the config flow."""
 
     VERSION = 1
 
@@ -53,28 +77,66 @@ class TeranexConfigFlow(ConfigFlow, domain=DOMAIN):
             host = user_input[CONF_HOST].strip()
             port = user_input.get(CONF_PORT, DEFAULT_PORT)
 
-            await self.async_set_unique_id(f"{host}:{port}")
+            await self.async_set_unique_id(_unique_id(host, port))
             self._abort_if_unique_id_configured()
 
-            client = TeranexClient(host, port)
             try:
-                await client.async_connect_once()
+                title = await _async_probe(host, port)
             except TeranexConnectionError:
                 errors["base"] = "cannot_connect"
             else:
-                title = (
-                    client.get("NETWORK CONFIG", "Friendly name")
-                    or client.model
-                    or DEFAULT_NAME
-                )
                 return self.async_create_entry(
                     title=title, data={CONF_HOST: host, CONF_PORT: port}
                 )
-            finally:
-                await client.async_close()
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_SCHEMA, errors=errors
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change the address of an existing Teranex.
+
+        Reached through the three-dot menu on the integration entry. The new
+        address is only stored after a successful connection, so a typo can
+        never leave a working entry pointing at nothing.
+        """
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            host = user_input[CONF_HOST].strip()
+            port = user_input.get(CONF_PORT, DEFAULT_PORT)
+            new_unique_id = _unique_id(host, port)
+
+            if self._is_in_use_by_other_entry(entry, new_unique_id):
+                return self.async_abort(reason="already_configured")
+
+            try:
+                await _async_probe(host, port)
+            except TeranexConnectionError:
+                errors["base"] = "cannot_connect"
+            else:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    unique_id=new_unique_id,
+                    data_updates={CONF_HOST: host, CONF_PORT: port},
+                )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_USER_SCHEMA, user_input or dict(entry.data)
+            ),
+            errors=errors,
+        )
+
+    def _is_in_use_by_other_entry(self, entry: ConfigEntry, unique_id: str) -> bool:
+        """Return True when another entry already owns this address."""
+        return any(
+            other.unique_id == unique_id and other.entry_id != entry.entry_id
+            for other in self._async_current_entries(include_ignore=False)
         )
 
 
@@ -97,10 +159,6 @@ class TeranexOptionsFlow(OptionsFlow):
             CONF_VIDEO_MODES, list(DEFAULT_VIDEO_MODES)
         )
         schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_VIDEO_MODES, default=", ".join(current)
-                ): str
-            }
+            {vol.Required(CONF_VIDEO_MODES, default=", ".join(current)): str}
         )
         return self.async_show_form(step_id="init", data_schema=schema)

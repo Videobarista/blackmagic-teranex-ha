@@ -24,9 +24,9 @@ unavailable entities.
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections import deque
 from collections.abc import Callable, Mapping
+import logging
 
 _LOGGER = logging.getLogger(__name__)
 

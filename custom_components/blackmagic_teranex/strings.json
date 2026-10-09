@@ -8,13 +8,22 @@
           "host": "Host",
           "port": "Port"
         }
+      },
+      "reconfigure": {
+        "title": "Change address",
+        "description": "Enter the new IP address of this Teranex. The address is only saved once the unit answers on it, and all entities, history and automations are kept.",
+        "data": {
+          "host": "Host",
+          "port": "Port"
+        }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect. Check the IP address and make sure the Teranex is powered on and on the network."
     },
     "abort": {
-      "already_configured": "This Teranex is already configured."
+      "already_configured": "Another configured Teranex already uses this address.",
+      "reconfigure_successful": "The address has been updated."
     }
   },
   "options": {
