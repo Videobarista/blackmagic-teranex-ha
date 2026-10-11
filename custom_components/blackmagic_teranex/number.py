@@ -57,6 +57,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         field="Gain",
         native_min_value=-60,
         native_max_value=60,
+        mode=NumberMode.SLIDER,
     ),
     TeranexNumberDescription(
         key="proc_amp_black",
@@ -65,6 +66,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         field="Black",
         native_min_value=-30,
         native_max_value=30,
+        mode=NumberMode.SLIDER,
     ),
     TeranexNumberDescription(
         key="proc_amp_saturation",
@@ -73,6 +75,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         field="Saturation",
         native_min_value=-60,
         native_max_value=60,
+        mode=NumberMode.SLIDER,
     ),
     TeranexNumberDescription(
         key="proc_amp_hue",
@@ -81,6 +84,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         field="Hue",
         native_min_value=-179,
         native_max_value=180,
+        mode=NumberMode.SLIDER,
     ),
     TeranexNumberDescription(
         key="proc_amp_ry",
@@ -90,6 +94,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         native_min_value=-200,
         native_max_value=200,
         entity_registry_enabled_default=False,
+        mode=NumberMode.SLIDER,
     ),
     TeranexNumberDescription(
         key="proc_amp_by",
@@ -99,6 +104,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         native_min_value=-200,
         native_max_value=200,
         entity_registry_enabled_default=False,
+        mode=NumberMode.SLIDER,
     ),
     TeranexNumberDescription(
         key="proc_amp_sharp",
@@ -107,6 +113,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         field="Sharp",
         native_min_value=-50,
         native_max_value=50,
+        mode=NumberMode.SLIDER,
     ),
     # Video adjust: RGB trim
     TeranexNumberDescription(
@@ -116,6 +123,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         field="Red",
         native_min_value=-200,
         native_max_value=200,
+        mode=NumberMode.SLIDER,
     ),
     TeranexNumberDescription(
         key="adjust_green",
@@ -124,6 +132,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         field="Green",
         native_min_value=-200,
         native_max_value=200,
+        mode=NumberMode.SLIDER,
     ),
     TeranexNumberDescription(
         key="adjust_blue",
@@ -132,6 +141,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         field="Blue",
         native_min_value=-200,
         native_max_value=200,
+        mode=NumberMode.SLIDER,
     ),
     # Video adjust: clipping levels, in 10-bit code values
     TeranexNumberDescription(
@@ -216,6 +226,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         field="Bias",
         native_min_value=-3,
         native_max_value=3,
+        mode=NumberMode.SLIDER,
     ),
     # Audio. The device stores gain in tenths of a decibel.
     TeranexNumberDescription(
@@ -228,6 +239,7 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         native_step=0.1,
         native_unit_of_measurement="dB",
         scale=10,
+        mode=NumberMode.SLIDER,
     ),
     TeranexNumberDescription(
         key="audio_delay",
@@ -372,7 +384,6 @@ class TeranexNumber(TeranexEntity, NumberEntity):
 
     entity_description: TeranexNumberDescription
     _attr_native_step = 1
-    _attr_mode = NumberMode.SLIDER
 
     def __init__(
         self,

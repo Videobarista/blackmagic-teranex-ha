@@ -277,3 +277,20 @@ async def test_zoom_crop_switch(
     assert fake_client.instances[0].sent == [
         ("VARIABLE ASPECT RATIO", {"Variable Aspect Ratio zoom/crop": "true"})
     ]
+
+
+async def test_number_modes(
+    hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: type[FakeClient]
+) -> None:
+    """Precise values are typed in; proc amp controls stay sliders."""
+    await _setup(hass, config_entry)
+
+    delay = hass.states.get(_entity_id(hass, "number", config_entry, "audio_delay"))
+    assert delay is not None
+    assert delay.attributes["mode"] == "box"
+    assert delay.attributes["min"] == -28
+    assert delay.attributes["max"] == 1000
+
+    gain = hass.states.get(_entity_id(hass, "number", config_entry, "proc_amp_gain"))
+    assert gain is not None
+    assert gain.attributes["mode"] == "slider"
