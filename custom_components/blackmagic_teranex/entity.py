@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 
+from homeassistant.const import CONF_NAME
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
-from .const import DOMAIN, MANUFACTURER
+from .const import CONF_MODEL, CONF_SW_VERSION, DOMAIN, MANUFACTURER
 from .protocol import (
     BLOCK_DEVICE,
     BLOCK_NETWORK,
@@ -34,13 +35,32 @@ class TeranexEntity(Entity):
 
     @property
     def device_info(self) -> DeviceInfo:
-        """Return device registry information."""
+        """Return device registry information.
+
+        Live values from the unit win; while it is switched off the identity
+        stored in the config entry is used, so the device keeps its details.
+        """
+        stored: dict[str, str] = {}
+        title: str | None = None
+        if self.hass is not None and (
+            entry := self.hass.config_entries.async_get_entry(self._entry_id)
+        ):
+            stored = dict(entry.data)
+            title = entry.title
+
         return DeviceInfo(
             identifiers={(DOMAIN, self._entry_id)},
             manufacturer=MANUFACTURER,
-            model=self._client.model or "Teranex",
-            name=self._client.get(BLOCK_NETWORK, "Friendly name"),
-            sw_version=self._client.get(BLOCK_DEVICE, "Software Version"),
+            model=self._client.model or stored.get(CONF_MODEL) or "Teranex",
+            name=(
+                self._client.get(BLOCK_NETWORK, "Friendly name")
+                or stored.get(CONF_NAME)
+                or title
+            ),
+            sw_version=(
+                self._client.get(BLOCK_DEVICE, "Software Version")
+                or stored.get(CONF_SW_VERSION)
+            ),
             configuration_url=f"http://{self._client.host}",
         )
 

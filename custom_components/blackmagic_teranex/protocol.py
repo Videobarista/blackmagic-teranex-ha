@@ -37,7 +37,7 @@ READY_TIMEOUT = 15.0
 COMMAND_TIMEOUT = 10.0
 PING_INTERVAL = 30.0
 RECONNECT_MIN = 5.0
-RECONNECT_MAX = 120.0
+RECONNECT_MAX = 60.0
 
 BLOCK_PREAMBLE = "PROTOCOL PREAMBLE"
 BLOCK_DEVICE = "TERANEX DEVICE"
@@ -88,6 +88,7 @@ class TeranexClient:
 
         self._connected = False
         self._closing = False
+        self._last_logged_online: bool | None = None
         self._ready = asyncio.Event()
         self._send_lock = asyncio.Lock()
         self._waiters: deque[asyncio.Future[bool]] = deque()
@@ -144,15 +145,24 @@ class TeranexClient:
             ) from err
 
     async def async_start(self) -> None:
-        """Start the supervised connection and wait for the first dump."""
+        """Start the supervised connection in the background.
+
+        This never fails: a Teranex that is switched off is a normal state,
+        and the supervisor keeps trying until it answers.
+        """
         self._closing = False
         self._supervisor = asyncio.create_task(self._supervise())
+
+    async def async_wait_ready(self, timeout: float) -> bool:
+        """Wait up to timeout seconds for the first state dump.
+
+        Returns False when the device did not answer in time.
+        """
         try:
-            await asyncio.wait_for(self._ready.wait(), READY_TIMEOUT)
-        except TimeoutError as err:
-            raise TeranexConnectionError(
-                f"No response from {self.host}:{self.port}"
-            ) from err
+            await asyncio.wait_for(self._ready.wait(), timeout)
+        except TimeoutError:
+            return False
+        return True
 
     async def async_close(self) -> None:
         """Tear everything down."""
@@ -211,8 +221,9 @@ class TeranexClient:
     async def _supervise(self) -> None:
         """Keep the connection up, reconnecting with backoff.
 
-        A device that is off or unreachable is expected in this domain, so
-        failures here are debug level; the entities simply go unavailable.
+        A device that is off or unreachable is expected in this domain. Each
+        change between online and offline is logged once at info level; the
+        individual retries in between are debug level only.
         """
         delay = RECONNECT_MIN
         while not self._closing:
@@ -220,8 +231,10 @@ class TeranexClient:
                 await self._open()
             except TeranexConnectionError as err:
                 _LOGGER.debug("Teranex %s not reachable: %s", self.host, err)
+                self._log_reachability(False)
             else:
                 delay = RECONNECT_MIN
+                self._log_reachability(True)
                 reader_task = self._reader_task
                 if reader_task is not None:
                     try:
@@ -234,11 +247,23 @@ class TeranexClient:
                 return
 
             await self._disconnect()
-            _LOGGER.debug(
-                "Teranex %s disconnected, retrying in %.0f s", self.host, delay
-            )
+            _LOGGER.debug("Teranex %s retrying in %.0f s", self.host, delay)
             await asyncio.sleep(delay)
             delay = min(delay * 2, RECONNECT_MAX)
+
+    def _log_reachability(self, online: bool) -> None:
+        """Log a change between reachable and unreachable, once per change."""
+        if online == self._last_logged_online:
+            return
+        if online:
+            _LOGGER.info("Teranex %s:%s is online", self.host, self.port)
+        else:
+            _LOGGER.info(
+                "Teranex %s:%s is offline, will keep trying to reconnect",
+                self.host,
+                self.port,
+            )
+        self._last_logged_online = online
 
     async def _open(self) -> None:
         """Open the socket and start the reader and keepalive tasks."""

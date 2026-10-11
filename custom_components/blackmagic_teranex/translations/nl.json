@@ -7,6 +7,10 @@
         "data": {
           "host": "Host",
           "port": "Poort"
+        },
+        "data_description": {
+          "host": "IP-adres of hostnaam van de Teranex. Geef de unit bij voorkeur een vast adres of DHCP-reservering.",
+          "port": "TCP-poort van het Teranex Ethernet-protocol. Laat op 9800 staan, tenzij je dat bewust hebt veranderd."
         }
       },
       "reconfigure": {
@@ -15,6 +19,10 @@
         "data": {
           "host": "Host",
           "port": "Poort"
+        },
+        "data_description": {
+          "host": "IP-adres of hostnaam van de Teranex. Geef de unit bij voorkeur een vast adres of DHCP-reservering.",
+          "port": "TCP-poort van het Teranex Ethernet-protocol. Laat op 9800 staan, tenzij je dat bewust hebt veranderd."
         }
       }
     },
@@ -33,6 +41,9 @@
         "description": "Kommagescheiden lijst met uitgangsformaten, precies zoals de Teranex ze rapporteert (bijvoorbeeld 1080p24, 1080i50). Het formaat dat nu actief is, staat er altijd bij.",
         "data": {
           "video_modes": "Uitgangsformaten"
+        },
+        "data_description": {
+          "video_modes": "Bijvoorbeeld: 1080i50, 1080p25, 1080p50. Ongeldige namen worden door de Teranex geweigerd."
         }
       }
     }
@@ -77,6 +88,9 @@
       }
     },
     "binary_sensor": {
+      "connection": {
+        "name": "Verbinding"
+      },
       "signal_present": {
         "name": "Ingangssignaal"
       },

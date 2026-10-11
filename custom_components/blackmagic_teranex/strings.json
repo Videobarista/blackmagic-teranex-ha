@@ -7,6 +7,10 @@
         "data": {
           "host": "Host",
           "port": "Port"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the Teranex. A static address or DHCP reservation is recommended.",
+          "port": "TCP port of the Teranex Ethernet Protocol. Leave at 9800 unless you changed it on purpose."
         }
       },
       "reconfigure": {
@@ -15,6 +19,10 @@
         "data": {
           "host": "Host",
           "port": "Port"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the Teranex. A static address or DHCP reservation is recommended.",
+          "port": "TCP port of the Teranex Ethernet Protocol. Leave at 9800 unless you changed it on purpose."
         }
       }
     },
@@ -33,6 +41,9 @@
         "description": "Comma separated list of output formats to offer, written exactly as the Teranex reports them (for example 1080p24, 1080i50). The format currently active on the device is always available.",
         "data": {
           "video_modes": "Output formats"
+        },
+        "data_description": {
+          "video_modes": "For example: 1080i50, 1080p25, 1080p50. Names the Teranex does not know are rejected by the unit."
         }
       }
     }
@@ -77,6 +88,9 @@
       }
     },
     "binary_sensor": {
+      "connection": {
+        "name": "Connection"
+      },
       "signal_present": {
         "name": "Input signal"
       },

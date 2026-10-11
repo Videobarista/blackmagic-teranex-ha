@@ -4,6 +4,8 @@
 [![Hassfest](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/hassfest.yml/badge.svg?branch=main)](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/hassfest.yml)
 [![HACS](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/hacs.yml/badge.svg?branch=main)](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/hacs.yml)
 [![CodeQL](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/codeql.yml)
+[![Tests](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Videobarista/blackmagic-teranex-ha/actions/workflows/tests.yml)
+[![Quality scale: Bronze](https://img.shields.io/badge/quality%20scale-Bronze%20aligned-cd7f32.svg)](#quality-scale)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Videobarista/blackmagic-teranex-ha)](https://github.com/Videobarista/blackmagic-teranex-ha/releases)
 
@@ -17,6 +19,23 @@ Developed against a **Teranex 2D**.
 ## Status
 
 Stable, running against a Teranex 2D.
+
+## When the unit is switched off
+
+A Teranex in a rack is often powered by a switched outlet, so being off is a
+normal state rather than a fault. The integration treats it that way:
+
+- Setup never fails on an unreachable unit. Home Assistant starts, the device
+  and its entities are there, and they show as unavailable.
+- The **Connection** sensor stays available and reads *Disconnected*, so the
+  device page explains itself.
+- The device keeps its name, model and firmware version while off. They are
+  remembered from the last time the unit answered.
+- The integration keeps reconnecting in the background, starting at 5
+  seconds and backing off to once a minute, and picks the unit up as soon as
+  it answers.
+- The log gets one line when the unit goes offline and one when it comes back,
+  not a line per retry.
 
 ## Why local push
 
@@ -111,6 +130,7 @@ show.
 
 | Entity | Type |
 | --- | --- |
+| Connection | binary sensor, stays available while the unit is off |
 | Input signal, Genlock locked, Timecode, Closed captions | binary sensor |
 | Still frame, Optical module | binary sensor |
 | Input format, Input pixel format | sensor |
@@ -130,6 +150,8 @@ target:
 data:
   preset: 3
 ```
+
+Targeting the whole device also works; only the Preset entity acts on it.
 
 The device never reports which preset is active, so the Preset entity shows
 the last preset recalled from Home Assistant and goes back to unknown when
@@ -166,8 +188,8 @@ differently; turn on debug logging to see what it actually sends.
 ## Power state
 
 The Teranex has no power on, standby or Wake-on-LAN command, so there is no
-power entity. A unit that is off or unplugged simply shows as unavailable,
-and the integration keeps retrying with a backoff.
+power entity. Use the **Connection** sensor to see whether the unit is up; see
+[When the unit is switched off](#when-the-unit-is-switched-off).
 
 `Panel lock` and `Remote lock` can be written over the protocol but are never
 reported back by the device, so they are not exposed as entities.
@@ -190,8 +212,9 @@ logger:
     custom_components.blackmagic_teranex: debug
 ```
 
-Unreachable devices log at debug level on purpose — a switched-off processor is
-a normal condition in a rack, not an error worth filling your log with.
+A switched-off processor is a normal condition in a rack, so it logs one info
+line when it goes offline and one when it comes back. The individual reconnect
+attempts in between only show at debug level.
 
 ## Brand images
 
@@ -200,6 +223,26 @@ which Home Assistant 2026.3 and later picks up automatically. It is an original,
 generic design — a 4:3 picture becoming a 16:9 picture — and not the
 Blackmagic Design logo. Replace `icon.png` (256x256) and `icon@2x.png`
 (512x512) with your own artwork if you prefer, then restart Home Assistant.
+
+## Removal
+
+Settings → Devices & services → *Blackmagic Teranex* → three-dot menu on
+the entry → **Delete**. To remove the code as well, uninstall the repository
+in HACS and restart Home Assistant. Nothing is changed on the Teranex itself.
+
+## Quality scale
+
+Aligned with the Home Assistant quality scale: Bronze. Home Assistant only
+grades core integrations, so this is a self-assessment, recorded rule by rule
+in [`quality_scale.yaml`](custom_components/blackmagic_teranex/quality_scale.yaml).
+
+One Bronze rule is deliberately exempt: *test-before-setup*. That rule wants
+setup to fail when the device cannot be reached, which would turn every
+switched-off Teranex into a "Failed to set up" error. The connection is tested
+in the config flow and in reconfigure instead.
+
+The test suite covers the config flow, reconfigure, the options flow, setup
+with the unit on and off, the save_preset action, and the protocol parser.
 
 ## Security
 

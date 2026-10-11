@@ -12,17 +12,19 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
 
 from .const import (
+    CONF_MODEL,
+    CONF_SW_VERSION,
     CONF_VIDEO_MODES,
     DEFAULT_NAME,
     DEFAULT_PORT,
     DEFAULT_VIDEO_MODES,
     DOMAIN,
 )
-from .protocol import BLOCK_NETWORK, TeranexClient, TeranexConnectionError
+from .protocol import BLOCK_DEVICE, BLOCK_NETWORK, TeranexClient, TeranexConnectionError
 
 STEP_USER_SCHEMA = vol.Schema(
     {
@@ -43,17 +45,24 @@ def _unique_id(host: str, port: int) -> str:
     return f"{host}:{port}"
 
 
-async def _async_probe(host: str, port: int) -> str:
-    """Connect once, read the initial dump and return a title for the entry.
+async def _async_probe(host: str, port: int) -> dict[str, str]:
+    """Connect once, read the initial dump and return the unit's identity.
 
+    The identity is stored in the config entry, so the device keeps its name,
+    model and firmware in Home Assistant while the unit is switched off.
     Raises TeranexConnectionError when the device cannot be reached.
     """
     client = TeranexClient(host, port)
     try:
         await client.async_connect_once()
-        return client.get(BLOCK_NETWORK, "Friendly name") or client.model or DEFAULT_NAME
+        identity = {
+            CONF_NAME: client.get(BLOCK_NETWORK, "Friendly name"),
+            CONF_MODEL: client.get(BLOCK_DEVICE, "Model name"),
+            CONF_SW_VERSION: client.get(BLOCK_DEVICE, "Software Version"),
+        }
     finally:
         await client.async_close()
+    return {key: value for key, value in identity.items() if value}
 
 
 class TeranexConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -81,16 +90,22 @@ class TeranexConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             try:
-                title = await _async_probe(host, port)
+                identity = await _async_probe(host, port)
             except TeranexConnectionError:
                 errors["base"] = "cannot_connect"
             else:
+                title = identity.get(CONF_NAME) or identity.get(CONF_MODEL) or DEFAULT_NAME
                 return self.async_create_entry(
-                    title=title, data={CONF_HOST: host, CONF_PORT: port}
+                    title=title,
+                    data={CONF_HOST: host, CONF_PORT: port, **identity},
                 )
 
         return self.async_show_form(
-            step_id="user", data_schema=STEP_USER_SCHEMA, errors=errors
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_USER_SCHEMA, user_input or {}
+            ),
+            errors=errors,
         )
 
     async def async_step_reconfigure(
@@ -114,14 +129,14 @@ class TeranexConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="already_configured")
 
             try:
-                await _async_probe(host, port)
+                identity = await _async_probe(host, port)
             except TeranexConnectionError:
                 errors["base"] = "cannot_connect"
             else:
                 return self.async_update_reload_and_abort(
                     entry,
                     unique_id=new_unique_id,
-                    data_updates={CONF_HOST: host, CONF_PORT: port},
+                    data_updates={CONF_HOST: host, CONF_PORT: port, **identity},
                 )
 
         return self.async_show_form(

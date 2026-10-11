@@ -10,6 +10,16 @@ MANUFACTURER = "Blackmagic Design"
 
 CONF_VIDEO_MODES = "video_modes"
 
+# Last known identity of the unit, stored in the config entry so the device
+# keeps its name, model and firmware in Home Assistant while it is switched off.
+CONF_MODEL = "model"
+CONF_SW_VERSION = "sw_version"
+
+# How long setup waits for the first state dump before carrying on without
+# it. Setup never fails on an unreachable unit; this only avoids entities
+# briefly showing unknown when the unit is online.
+SETUP_GRACE_PERIOD = 5.0
+
 # Output formats offered by default. The device cannot enumerate its own
 # format list, so this is a sensible starting set for a Teranex 2D; it can be
 # replaced per config entry through the options flow. Whatever the device

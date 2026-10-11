@@ -4,12 +4,9 @@ from __future__ import annotations
 
 import logging
 
-import voluptuous as vol
-
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -18,14 +15,12 @@ from .const import (
     AFD_INSERT_TYPES,
     ANALOG_OUTPUTS,
     ASPECT_RATIOS,
-    ATTR_PRESET,
     AUDIO_CHANNELS,
     AUDIO_ROUTING_SOURCES,
     AUDIO_SOURCES,
     CONF_VIDEO_MODES,
     DEFAULT_VIDEO_MODES,
     NO_SIGNAL_OUTPUTS,
-    SERVICE_SAVE_PRESET,
     TEST_PATTERNS,
     TIMECODE_DROP_FRAME,
     TIMECODE_MODES,
@@ -45,7 +40,7 @@ from .protocol import (
 
 _LOGGER = logging.getLogger(__name__)
 
-PRESET_COUNT = 6
+PRESET_COUNT = 6  # The Teranex has six preset slots.
 
 
 async def async_setup_entry(
@@ -197,17 +192,6 @@ async def async_setup_entry(
     )
     async_add_entities(entities)
 
-    platform = entity_platform.async_get_current_platform()
-    platform.async_register_entity_service(
-        SERVICE_SAVE_PRESET,
-        {
-            vol.Required(ATTR_PRESET): vol.All(
-                cv.positive_int, vol.Range(min=1, max=PRESET_COUNT)
-            )
-        },
-        "async_save_preset",
-    )
-
 
 class TeranexSelect(TeranexEntity, SelectEntity):
     """A setting with a fixed set of values.
@@ -258,6 +242,13 @@ class TeranexSelect(TeranexEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Send the new value; the device reports the result itself."""
         await self.async_send(self._block, {self._field: option})
+
+    async def async_save_preset(self, preset: int) -> None:
+        """Ignore save_preset aimed at this entity.
+
+        The action is registered for every Teranex select, so targeting a
+        whole device reaches all of them. Only the Preset entity acts on it.
+        """
 
 
 class TeranexPresetSelect(TeranexEntity, SelectEntity):
