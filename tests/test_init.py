@@ -33,6 +33,13 @@ def _entity_id(hass: HomeAssistant, domain: str, entry: MockConfigEntry, key: st
     return entity_id
 
 
+def _device(hass: HomeAssistant, entry: MockConfigEntry) -> dr.DeviceEntry:
+    """Return the single device the config entry owns."""
+    devices = dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+    assert len(devices) == 1
+    return devices[0]
+
+
 async def _setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
@@ -56,8 +63,7 @@ async def test_setup_while_unit_is_off(
     assert model is not None
     assert model.state == STATE_UNAVAILABLE
 
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, config_entry.entry_id)})
-    assert device is not None
+    device = _device(hass, config_entry)
     assert device.name == "Studio Teranex"
     assert device.model == "Teranex 2D"
     assert device.sw_version == "0x74e4b2e"
@@ -95,8 +101,7 @@ async def test_new_firmware_is_remembered(
     await hass.async_block_till_done()
 
     assert config_entry.data[CONF_SW_VERSION] == "0x80000ab"
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, config_entry.entry_id)})
-    assert device is not None
+    device = _device(hass, config_entry)
     assert device.sw_version == "0x80000ab"
     assert len(fake_client.instances) == 1
     assert config_entry.state is ConfigEntryState.LOADED
@@ -202,3 +207,73 @@ async def test_number_scaling(
     )
 
     assert fake_client.instances[0].sent == [("AUDIO", {"AudioInLevel0": "-30"})]
+
+
+async def test_aspect_ranges_follow_output_format(
+    hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: type[FakeClient]
+) -> None:
+    """Aspect ranges use the output size the unit reports."""
+    await _setup(hass, config_entry)
+
+    size_x = hass.states.get(_entity_id(hass, "number", config_entry, "aspect_size_x"))
+    assert size_x is not None
+    assert size_x.attributes["min"] == -3840
+    assert size_x.attributes["max"] == 3840
+
+    trim_y = hass.states.get(_entity_id(hass, "number", config_entry, "aspect_trim_y"))
+    assert trim_y is not None
+    assert trim_y.attributes["max"] == 1080
+
+    pos_y = hass.states.get(_entity_id(hass, "number", config_entry, "aspect_position_y"))
+    assert pos_y is not None
+    assert float(pos_y.state) == -12
+
+
+async def test_aspect_ranges_fall_back_to_hd(
+    hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: type[FakeClient]
+) -> None:
+    """Without a reported output size the ranges assume an HD output."""
+    fake_client.online = False
+    await _setup(hass, config_entry)
+    client = fake_client.instances[0]
+    client.connected = True
+    client.notify()
+    await hass.async_block_till_done()
+
+    size_y = hass.states.get(_entity_id(hass, "number", config_entry, "aspect_size_y"))
+    assert size_y is not None
+    assert size_y.attributes["min"] == -1080
+    assert size_y.attributes["max"] == 1080
+
+
+async def test_aspect_value_is_sent(
+    hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: type[FakeClient]
+) -> None:
+    """Setting an aspect value sends the left field, which a 2D acts on."""
+    await _setup(hass, config_entry)
+    size_y = _entity_id(hass, "number", config_entry, "aspect_size_y")
+
+    await hass.services.async_call(
+        "number", "set_value", {"entity_id": size_y, "value": -67}, blocking=True
+    )
+
+    assert fake_client.instances[0].sent == [
+        ("VARIABLE ASPECT RATIO", {"Variable Aspect Ratio size Y left": "-67"})
+    ]
+
+
+async def test_zoom_crop_switch(
+    hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: type[FakeClient]
+) -> None:
+    """Zoom/crop is a switch that sends true or false."""
+    await _setup(hass, config_entry)
+    zoom = _entity_id(hass, "switch", config_entry, "aspect_zoom_crop")
+    state = hass.states.get(zoom)
+    assert state is not None
+    assert state.state == "off"
+
+    await hass.services.async_call("switch", "turn_on", {"entity_id": zoom}, blocking=True)
+
+    assert fake_client.instances[0].sent == [
+        ("VARIABLE ASPECT RATIO", {"Variable Aspect Ratio zoom/crop": "true"})
+    ]

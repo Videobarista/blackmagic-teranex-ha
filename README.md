@@ -86,6 +86,8 @@ show.
 | --- | --- |
 | Video input, Audio source | select |
 | Output format, Output aspect ratio, Output analogue | select |
+| Output aspect size, position and trim, X and Y | number |
+| Output aspect zoom/crop | switch |
 | Proc amp gain, black level, saturation, hue, sharpness, R-Y, B-Y | number |
 | Proc amp red, green and blue trim | number |
 | Video adjust luma and chroma clipping | number |
@@ -162,6 +164,18 @@ anyone recalls one from the front panel.
 Not implemented. The protocol documents the test tone for the Teranex AV only.
 A 2D reports the field and accepts the command, but ignores it and reports
 `None` straight back, so an entity for it would only ever look broken.
+
+## Aspect adjustment
+
+The *Output aspect* size, position and trim controls are the ADJ menu from the
+front panel: fine-tuning on top of the chosen aspect ratio. Horizontal values
+are in pixels and vertical values in lines of the current output format, so
+their range follows the output: about ±1920 on an HD output and ±3840 on
+UHD. Trim is limited to half the picture. Until the unit has reported its
+output size, the ranges assume HD.
+
+The protocol has separate left and right fields for 3D on the Teranex 3D. On
+a 2D only the left fields do anything, so those are the ones exposed.
 
 ## Audio routing
 

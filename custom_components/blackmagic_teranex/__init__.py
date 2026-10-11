@@ -137,9 +137,9 @@ def _identity_listener(
 
         hass.config_entries.async_update_entry(entry, data={**entry.data, **changes})
 
+        # Each config entry owns exactly one device: the Teranex itself.
         registry = dr.async_get(hass)
-        device = registry.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
-        if device is not None:
+        for device in dr.async_entries_for_config_entry(registry, entry.entry_id):
             registry.async_update_device(
                 device.id,
                 name=entry.data.get(CONF_NAME),

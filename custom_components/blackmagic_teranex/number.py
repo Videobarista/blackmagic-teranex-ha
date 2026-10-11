@@ -22,6 +22,7 @@ from .protocol import (
     BLOCK_AUDIO,
     BLOCK_NOISE_REDUCTION,
     BLOCK_PROC_AMP,
+    BLOCK_VARIABLE_ASPECT,
     BLOCK_VIDEO_ADJUST,
     TeranexClient,
 )
@@ -38,6 +39,12 @@ class TeranexNumberDescription(NumberEntityDescription):
     # The device stores some values scaled, such as audio gain in tenths of a
     # decibel. Everything the user sees is divided by this.
     scale: int = 1
+    # Some ranges depend on the current output format. When set, the range
+    # is plus and minus this share of the output width or height, which the
+    # unit reports in the same block. The fallback covers an HD output.
+    span_field: str | None = None
+    span_fallback: int = 0
+    span_share: float = 1.0
 
 
 # Ranges come from the Teranex Ethernet Protocol documentation.
@@ -286,6 +293,65 @@ NUMBERS: tuple[TeranexNumberDescription, ...] = (
         entity_category=EntityCategory.CONFIG,
         entity_registry_enabled_default=False,
     ),
+    # Variable aspect ratio, the ADJ menu on the front panel. Horizontal
+    # values are in pixels and vertical values in lines of the current output
+    # format; only the "left" fields act on a Teranex 2D.
+    TeranexNumberDescription(
+        key="aspect_size_x",
+        translation_key="aspect_size_x",
+        block=BLOCK_VARIABLE_ASPECT,
+        field="Variable Aspect Ratio size X left",
+        mode=NumberMode.BOX,
+        span_field="Variable Aspect Ratio last output width",
+        span_fallback=1920,
+    ),
+    TeranexNumberDescription(
+        key="aspect_size_y",
+        translation_key="aspect_size_y",
+        block=BLOCK_VARIABLE_ASPECT,
+        field="Variable Aspect Ratio size Y left",
+        mode=NumberMode.BOX,
+        span_field="Variable Aspect Ratio last output height",
+        span_fallback=1080,
+    ),
+    TeranexNumberDescription(
+        key="aspect_position_x",
+        translation_key="aspect_position_x",
+        block=BLOCK_VARIABLE_ASPECT,
+        field="Variable Aspect Ratio pos X left",
+        mode=NumberMode.BOX,
+        span_field="Variable Aspect Ratio last output width",
+        span_fallback=1920,
+    ),
+    TeranexNumberDescription(
+        key="aspect_position_y",
+        translation_key="aspect_position_y",
+        block=BLOCK_VARIABLE_ASPECT,
+        field="Variable Aspect Ratio pos Y left",
+        mode=NumberMode.BOX,
+        span_field="Variable Aspect Ratio last output height",
+        span_fallback=1080,
+    ),
+    TeranexNumberDescription(
+        key="aspect_trim_x",
+        translation_key="aspect_trim_x",
+        block=BLOCK_VARIABLE_ASPECT,
+        field="Variable Aspect Ratio trim X left",
+        mode=NumberMode.BOX,
+        span_field="Variable Aspect Ratio last output width",
+        span_fallback=1920,
+        span_share=0.5,
+    ),
+    TeranexNumberDescription(
+        key="aspect_trim_y",
+        translation_key="aspect_trim_y",
+        block=BLOCK_VARIABLE_ASPECT,
+        field="Variable Aspect Ratio trim Y left",
+        mode=NumberMode.BOX,
+        span_field="Variable Aspect Ratio last output height",
+        span_fallback=1080,
+        span_share=0.5,
+    ),
 )
 
 
@@ -317,6 +383,35 @@ class TeranexNumber(TeranexEntity, NumberEntity):
         """Initialise the number entity."""
         super().__init__(client, entry_id, description.key)
         self.entity_description = description
+
+    @property
+    def native_min_value(self) -> float:
+        """Return the lower bound, following the output format where needed."""
+        if self.entity_description.span_field is None:
+            return super().native_min_value
+        return -self._span()
+
+    @property
+    def native_max_value(self) -> float:
+        """Return the upper bound, following the output format where needed."""
+        if self.entity_description.span_field is None:
+            return super().native_max_value
+        return self._span()
+
+    def _span(self) -> float:
+        """Return the allowed distance from zero for an output-format range."""
+        description = self.entity_description
+        size = float(description.span_fallback)
+        if description.span_field is not None:
+            raw = self._client.get(description.block, description.span_field)
+            try:
+                reported = float(raw) if raw is not None else 0.0
+            except ValueError:
+                _LOGGER.debug("Teranex reported a non-numeric %s: %r", description.span_field, raw)
+                reported = 0.0
+            if reported > 0:
+                size = reported
+        return round(size * description.span_share)
 
     @property
     def native_value(self) -> float | None:

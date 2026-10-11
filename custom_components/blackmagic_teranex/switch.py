@@ -14,6 +14,7 @@ from .entity import TeranexEntity
 from .protocol import (
     BLOCK_ANCILLARY,
     BLOCK_NOISE_REDUCTION,
+    BLOCK_VARIABLE_ASPECT,
     BLOCK_VIDEO_INPUT,
     TeranexClient,
 )
@@ -59,6 +60,12 @@ SWITCHES: tuple[TeranexSwitchDescription, ...] = (
         translation_key="closed_captioning",
         block=BLOCK_ANCILLARY,
         field="CC enabled",
+    ),
+    TeranexSwitchDescription(
+        key="aspect_zoom_crop",
+        translation_key="aspect_zoom_crop",
+        block=BLOCK_VARIABLE_ASPECT,
+        field="Variable Aspect Ratio zoom/crop",
     ),
     TeranexSwitchDescription(
         key="wide_sd_aspect",

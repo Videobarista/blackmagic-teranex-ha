@@ -185,6 +185,24 @@
       },
       "afd_output_line": {
         "name": "AFD-uitgangsregel"
+      },
+      "aspect_size_x": {
+        "name": "Output aspect grootte X"
+      },
+      "aspect_size_y": {
+        "name": "Output aspect grootte Y"
+      },
+      "aspect_position_x": {
+        "name": "Output aspect positie X"
+      },
+      "aspect_position_y": {
+        "name": "Output aspect positie Y"
+      },
+      "aspect_trim_x": {
+        "name": "Output aspect trim X"
+      },
+      "aspect_trim_y": {
+        "name": "Output aspect trim Y"
       }
     },
     "switch": {
@@ -205,6 +223,9 @@
       },
       "wide_sd_aspect": {
         "name": "Video-ingang breedbeeld SD-bron"
+      },
+      "aspect_zoom_crop": {
+        "name": "Output aspect zoom/crop"
       }
     },
     "text": {

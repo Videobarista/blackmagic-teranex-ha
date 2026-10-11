@@ -185,6 +185,24 @@
       },
       "afd_output_line": {
         "name": "AFD output line"
+      },
+      "aspect_size_x": {
+        "name": "Output aspect size X"
+      },
+      "aspect_size_y": {
+        "name": "Output aspect size Y"
+      },
+      "aspect_position_x": {
+        "name": "Output aspect position X"
+      },
+      "aspect_position_y": {
+        "name": "Output aspect position Y"
+      },
+      "aspect_trim_x": {
+        "name": "Output aspect trim X"
+      },
+      "aspect_trim_y": {
+        "name": "Output aspect trim Y"
       }
     },
     "switch": {
@@ -205,6 +223,9 @@
       },
       "wide_sd_aspect": {
         "name": "Video input wide SD source"
+      },
+      "aspect_zoom_crop": {
+        "name": "Output aspect zoom/crop"
       }
     },
     "text": {

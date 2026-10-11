@@ -32,6 +32,16 @@ DEVICE_STATE: dict[str, dict[str, str]] = {
     "VIDEO INPUT": {"Video source": "SDI1", "Signal present": "true"},
     "VIDEO OUTPUT": {"Video mode": "1080p25", "Aspect ratio": "Anamorphic"},
     "VIDEO PROC AMP": {"Gain": "0"},
+    # A UHD output, so the aspect ranges differ from the HD fallback.
+    "VARIABLE ASPECT RATIO": {
+        "Variable Aspect Ratio size X left": "0.000000",
+        "Variable Aspect Ratio size Y left": "-67.000000",
+        "Variable Aspect Ratio pos Y left": "-12.000000",
+        "Variable Aspect Ratio trim Y left": "0",
+        "Variable Aspect Ratio zoom/crop": "false",
+        "Variable Aspect Ratio last output width": "3840",
+        "Variable Aspect Ratio last output height": "2160",
+    },
     "PRESET": {f"PresetName{index}": f"Preset {index + 1}" for index in range(6)},
 }
 
