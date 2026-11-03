@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.blackmagic_teranex.const import (
+    CONF_MODEL,
     CONF_SW_VERSION,
     CONF_VIDEO_MODES,
     DOMAIN,
@@ -17,12 +20,18 @@ from custom_components.blackmagic_teranex.protocol import (
     TeranexInvalidValueError,
 )
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_PORT,
+    STATE_OFF,
+    STATE_ON,
+    STATE_UNAVAILABLE,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
-from .conftest import FakeClient
+from .conftest import HOST, PORT, FakeClient
 
 
 def _entity_id(hass: HomeAssistant, domain: str, entry: MockConfigEntry, key: str) -> str:
@@ -133,6 +142,31 @@ async def test_no_update_listener(
     await _setup(hass, config_entry)
 
     assert not config_entry.update_listeners
+
+
+async def test_reconfigure_reloads_running_entry_once(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    fake_client: type[FakeClient],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A running entry moves to the new address with a single, clean reload."""
+    await _setup(hass, config_entry)
+
+    result = await config_entry.start_reconfigure_flow(hass)
+    with patch(
+        "custom_components.blackmagic_teranex.config_flow._async_probe",
+        new=AsyncMock(return_value={CONF_MODEL: "Teranex 2D"}),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_HOST: "192.0.2.20", CONF_PORT: PORT}
+        )
+    await hass.async_block_till_done()
+
+    assert result["reason"] == "reconfigure_successful"
+    assert config_entry.state is ConfigEntryState.LOADED
+    assert [client.host for client in fake_client.instances] == [HOST, "192.0.2.20"]
+    assert "update listener" not in caplog.text
 
 
 async def test_unload_closes_connection(
