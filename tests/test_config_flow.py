@@ -18,7 +18,7 @@ from custom_components.blackmagic_teranex.protocol import TeranexConnectionError
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
 
 from .conftest import DEVICE_STATE, HOST, PORT
 
@@ -81,13 +81,13 @@ async def test_user_flow_creates_entry(hass: HomeAssistant) -> None:
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Studio Teranex"
+    assert result["title"] == "Test Teranex"
     assert result["data"] == {
         CONF_HOST: HOST,
         CONF_PORT: PORT,
-        CONF_NAME: "Studio Teranex",
+        CONF_NAME: "Test Teranex",
         CONF_MODEL: "Teranex 2D",
-        CONF_SW_VERSION: "0x74e4b2e",
+        CONF_SW_VERSION: "0x00000001",
     }
     assert result["result"].unique_id == f"{HOST}:{PORT}"
     assert ProbeClient.closed == 1
@@ -156,13 +156,13 @@ async def test_reconfigure_changes_address(
     assert result["step_id"] == "reconfigure"
 
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_HOST: "192.168.51.200", CONF_PORT: PORT}
+        result["flow_id"], {CONF_HOST: "192.0.2.20", CONF_PORT: PORT}
     )
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
-    assert config_entry.data[CONF_HOST] == "192.168.51.200"
-    assert config_entry.unique_id == f"192.168.51.200:{PORT}"
+    assert config_entry.data[CONF_HOST] == "192.0.2.20"
+    assert config_entry.unique_id == f"192.0.2.20:{PORT}"
     assert config_entry.data[CONF_MODEL] == "Teranex 2D"
 
 
@@ -176,7 +176,7 @@ async def test_reconfigure_cannot_connect_keeps_old_address(
     probe_client.reachable = False
     result = await config_entry.start_reconfigure_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_HOST: "192.168.51.201", CONF_PORT: PORT}
+        result["flow_id"], {CONF_HOST: "192.0.2.21", CONF_PORT: PORT}
     )
 
     assert result["type"] is FlowResultType.FORM
@@ -192,14 +192,14 @@ async def test_reconfigure_rejects_address_of_other_unit(
     other = MockConfigEntry(
         domain=DOMAIN,
         title="Other Teranex",
-        unique_id=f"192.168.51.50:{PORT}",
-        data={CONF_HOST: "192.168.51.50", CONF_PORT: PORT},
+        unique_id=f"192.0.2.30:{PORT}",
+        data={CONF_HOST: "192.0.2.30", CONF_PORT: PORT},
     )
     other.add_to_hass(hass)
 
     result = await config_entry.start_reconfigure_flow(hass)
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_HOST: "192.168.51.50", CONF_PORT: PORT}
+        result["flow_id"], {CONF_HOST: "192.0.2.30", CONF_PORT: PORT}
     )
 
     assert result["type"] is FlowResultType.ABORT
@@ -222,3 +222,63 @@ async def test_options_flow_sets_output_formats(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert config_entry.options == {CONF_VIDEO_MODES: ["1080p25", "1080i50"]}
+
+
+@pytest.mark.parametrize("host", ["http://192.0.2.10/", "192.0.2.10 extra", "", "a/b"])
+async def test_user_flow_rejects_invalid_host(
+    hass: HomeAssistant, probe_client: type[ProbeClient], host: str
+) -> None:
+    """Anything that is not a plain host is refused before connecting."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: host, CONF_PORT: PORT}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_HOST: "invalid_host"}
+    assert probe_client.closed == 0
+
+
+@pytest.mark.parametrize("port", [0, 65536])
+async def test_user_flow_rejects_invalid_port(hass: HomeAssistant, port: int) -> None:
+    """Ports outside 1-65535 are refused by the form itself."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    with pytest.raises(InvalidData):
+        await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_HOST: HOST, CONF_PORT: port}
+        )
+
+
+async def test_reconfigure_rejects_invalid_host(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
+    """Reconfigure refuses a malformed host and keeps the old one."""
+    config_entry.add_to_hass(hass)
+    result = await config_entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: "http://192.0.2.20", CONF_PORT: PORT}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_HOST: "invalid_host"}
+    assert config_entry.data[CONF_HOST] == HOST
+
+
+@pytest.mark.parametrize("modes", ["1080p25\nPRESET:\nSave: 1", "1080p25, 1080i50: x", " , "])
+async def test_options_flow_rejects_invalid_formats(
+    hass: HomeAssistant, config_entry: MockConfigEntry, modes: str
+) -> None:
+    """Format names with line breaks, colons or nothing at all are refused."""
+    config_entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_VIDEO_MODES: modes}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_VIDEO_MODES: "invalid_video_mode"}
+    assert config_entry.options == {}

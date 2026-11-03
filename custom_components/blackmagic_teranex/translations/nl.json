@@ -27,7 +27,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Verbinden mislukt. Controleer het IP-adres en of de Teranex aan staat en op het netwerk zit."
+      "cannot_connect": "Verbinden mislukt. Controleer het IP-adres en of de Teranex aan staat en op het netwerk zit.",
+      "invalid_host": "Vul alleen een IP-adres of hostnaam in, zonder spaties, http:// of een pad."
     },
     "abort": {
       "already_configured": "Een andere geconfigureerde Teranex gebruikt dit adres al.",
@@ -46,6 +47,9 @@
           "video_modes": "Bijvoorbeeld: 1080i50, 1080p25, 1080p50. Ongeldige namen worden door de Teranex geweigerd."
         }
       }
+    },
+    "error": {
+      "invalid_video_mode": "Gebruik kommagescheiden formaatnamen zoals 1080p25 of 1080i50: alleen letters, cijfers en punten."
     }
   },
   "services": {

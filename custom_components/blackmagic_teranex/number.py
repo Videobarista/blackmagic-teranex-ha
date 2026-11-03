@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+import math
 
 from homeassistant.components.number import (
     NumberEntity,
@@ -28,6 +29,10 @@ from .protocol import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Largest frame dimension accepted from the unit when sizing aspect ranges.
+# 8K is 8192 wide; anything above that is a reporting error.
+MAX_OUTPUT_DIMENSION = 8192
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -420,7 +425,8 @@ class TeranexNumber(TeranexEntity, NumberEntity):
             except ValueError:
                 _LOGGER.debug("Teranex reported a non-numeric %s: %r", description.span_field, raw)
                 reported = 0.0
-            if reported > 0:
+            # Ignore nonsense such as inf, nan or an impossible frame size.
+            if math.isfinite(reported) and 0 < reported <= MAX_OUTPUT_DIMENSION:
                 size = reported
         return round(size * description.span_share)
 
@@ -440,6 +446,9 @@ class TeranexNumber(TeranexEntity, NumberEntity):
                 self.entity_description.field,
                 raw,
             )
+            return None
+        if not math.isfinite(value):
+            _LOGGER.debug("Teranex reported a non-finite %s", self.entity_description.field)
             return None
         return value / self.entity_description.scale
 

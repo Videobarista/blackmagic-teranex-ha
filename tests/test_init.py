@@ -14,11 +14,12 @@ from custom_components.blackmagic_teranex.const import (
 from custom_components.blackmagic_teranex.protocol import (
     TeranexCommandError,
     TeranexConnectionError,
+    TeranexInvalidValueError,
 )
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .conftest import FakeClient
@@ -64,9 +65,9 @@ async def test_setup_while_unit_is_off(
     assert model.state == STATE_UNAVAILABLE
 
     device = _device(hass, config_entry)
-    assert device.name == "Studio Teranex"
+    assert device.name == "Test Teranex"
     assert device.model == "Teranex 2D"
-    assert device.sw_version == "0x74e4b2e"
+    assert device.sw_version == "0x00000001"
 
 
 async def test_setup_while_unit_is_on(
@@ -294,3 +295,41 @@ async def test_number_modes(
     gain = hass.states.get(_entity_id(hass, "number", config_entry, "proc_amp_gain"))
     assert gain is not None
     assert gain.attributes["mode"] == "slider"
+
+
+async def test_non_finite_reports_are_ignored(
+    hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: type[FakeClient]
+) -> None:
+    """inf and nan from the unit fall back safely instead of breaking entities."""
+    fake_client.online = False
+    await _setup(hass, config_entry)
+    client = fake_client.instances[0]
+    client.connected = True
+    client.state = {
+        "VIDEO PROC AMP": {"Gain": "nan"},
+        "VARIABLE ASPECT RATIO": {"Variable Aspect Ratio last output height": "inf"},
+    }
+    client.notify()
+    await hass.async_block_till_done()
+
+    gain = hass.states.get(_entity_id(hass, "number", config_entry, "proc_amp_gain"))
+    assert gain is not None
+    assert gain.state == "unknown"
+
+    size_y = hass.states.get(_entity_id(hass, "number", config_entry, "aspect_size_y"))
+    assert size_y is not None
+    assert size_y.attributes["max"] == 1080
+
+
+async def test_unsafe_value_is_a_validation_error(
+    hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: type[FakeClient]
+) -> None:
+    """A value the client refuses to send is reported as invalid input."""
+    await _setup(hass, config_entry)
+    fake_client.instances[0].send_error = TeranexInvalidValueError("line break")
+    gain = _entity_id(hass, "number", config_entry, "proc_amp_gain")
+
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            "number", "set_value", {"entity_id": gain, "value": 10}, blocking=True
+        )

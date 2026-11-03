@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 from homeassistant.const import CONF_NAME
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
@@ -16,6 +16,7 @@ from .protocol import (
     TeranexClient,
     TeranexCommandError,
     TeranexConnectionError,
+    TeranexInvalidValueError,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -61,7 +62,6 @@ class TeranexEntity(Entity):
                 self._client.get(BLOCK_DEVICE, "Software Version")
                 or stored.get(CONF_SW_VERSION)
             ),
-            configuration_url=f"http://{self._client.host}",
         )
 
     @property
@@ -81,6 +81,10 @@ class TeranexEntity(Entity):
         """
         try:
             await self._client.async_send(block, fields)
+        except TeranexInvalidValueError as err:
+            raise ServiceValidationError(
+                f"This value cannot be sent to the Teranex: {err}"
+            ) from err
         except TeranexCommandError as err:
             _LOGGER.debug("Teranex rejected %s %s: %s", block, fields, err)
             raise HomeAssistantError(

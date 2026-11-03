@@ -17,7 +17,7 @@ from custom_components.blackmagic_teranex.const import (
 from custom_components.blackmagic_teranex.protocol import TeranexConnectionError
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 
-HOST = "192.168.51.167"
+HOST = "192.0.2.10"
 PORT = 9800
 
 # A trimmed copy of a real Teranex 2D state dump.
@@ -25,10 +25,10 @@ DEVICE_STATE: dict[str, dict[str, str]] = {
     "PROTOCOL PREAMBLE": {"Version": "1.13"},
     "TERANEX DEVICE": {
         "Model name": "Teranex 2D",
-        "Software Version": "0x74e4b2e",
+        "Software Version": "0x00000001",
         "FPGA Version": "0x30",
     },
-    "NETWORK CONFIG": {"Friendly name": "Studio Teranex", "IP address": "3232248743"},
+    "NETWORK CONFIG": {"Friendly name": "Test Teranex", "IP address": "3221225994"},
     "VIDEO INPUT": {"Video source": "SDI1", "Signal present": "true"},
     "VIDEO OUTPUT": {"Video mode": "1080p25", "Aspect ratio": "Anamorphic"},
     "VIDEO PROC AMP": {"Gain": "0"},
@@ -131,13 +131,13 @@ def config_entry() -> MockConfigEntry:
     data: dict[str, Any] = {
         CONF_HOST: HOST,
         CONF_PORT: PORT,
-        CONF_NAME: "Studio Teranex",
+        CONF_NAME: "Test Teranex",
         CONF_MODEL: "Teranex 2D",
-        CONF_SW_VERSION: "0x74e4b2e",
+        CONF_SW_VERSION: "0x00000001",
     }
     return MockConfigEntry(
         domain=DOMAIN,
-        title="Studio Teranex",
+        title="Test Teranex",
         unique_id=f"{HOST}:{PORT}",
         data=data,
     )

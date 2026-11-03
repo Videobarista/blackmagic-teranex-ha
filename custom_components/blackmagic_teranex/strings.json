@@ -27,7 +27,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect. Check the IP address and make sure the Teranex is powered on and on the network."
+      "cannot_connect": "Failed to connect. Check the IP address and make sure the Teranex is powered on and on the network.",
+      "invalid_host": "Enter an IP address or hostname only, without spaces, http:// or a path."
     },
     "abort": {
       "already_configured": "Another configured Teranex already uses this address.",
@@ -46,6 +47,9 @@
           "video_modes": "For example: 1080i50, 1080p25, 1080p50. Names the Teranex does not know are rejected by the unit."
         }
       }
+    },
+    "error": {
+      "invalid_video_mode": "Use comma separated format names such as 1080p25 or 1080i50: letters, digits and dots only."
     }
   },
   "services": {

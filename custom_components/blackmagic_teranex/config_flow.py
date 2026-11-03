@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import voluptuous as vol
@@ -14,6 +15,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
     CONF_MODEL,
@@ -29,9 +31,22 @@ from .protocol import BLOCK_DEVICE, BLOCK_NETWORK, TeranexClient, TeranexConnect
 STEP_USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
-        vol.Optional(CONF_PORT, default=DEFAULT_PORT): int,
+        vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
     }
 )
+
+# A hostname, IPv4 or IPv6 address: letters, digits, dots, hyphens and colons.
+# Anything else (spaces, a URL, a path) is refused before a connection is tried.
+_HOST = re.compile(r"[A-Za-z0-9.:-]{1,253}")
+
+# Output format names as the Teranex reports them, such as 1080p25 or 1080PsF24.
+_VIDEO_MODE = re.compile(r"[0-9A-Za-z.]{2,16}")
+
+
+def _clean_host(raw: str) -> str | None:
+    """Return the host without surrounding spaces, or None when it is not valid."""
+    host = raw.strip()
+    return host if _HOST.fullmatch(host) else None
 
 
 def _unique_id(host: str, port: int) -> str:
@@ -83,22 +98,24 @@ class TeranexConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            host = user_input[CONF_HOST].strip()
+            host = _clean_host(user_input[CONF_HOST])
             port = user_input.get(CONF_PORT, DEFAULT_PORT)
 
-            await self.async_set_unique_id(_unique_id(host, port))
-            self._abort_if_unique_id_configured()
-
-            try:
-                identity = await _async_probe(host, port)
-            except TeranexConnectionError:
-                errors["base"] = "cannot_connect"
+            if host is None:
+                errors[CONF_HOST] = "invalid_host"
             else:
-                title = identity.get(CONF_NAME) or identity.get(CONF_MODEL) or DEFAULT_NAME
-                return self.async_create_entry(
-                    title=title,
-                    data={CONF_HOST: host, CONF_PORT: port, **identity},
-                )
+                await self.async_set_unique_id(_unique_id(host, port))
+                self._abort_if_unique_id_configured()
+                try:
+                    identity = await _async_probe(host, port)
+                except TeranexConnectionError:
+                    errors["base"] = "cannot_connect"
+                else:
+                    title = identity.get(CONF_NAME) or identity.get(CONF_MODEL) or DEFAULT_NAME
+                    return self.async_create_entry(
+                        title=title,
+                        data={CONF_HOST: host, CONF_PORT: port, **identity},
+                    )
 
         return self.async_show_form(
             step_id="user",
@@ -121,23 +138,24 @@ class TeranexConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            host = user_input[CONF_HOST].strip()
+            host = _clean_host(user_input[CONF_HOST])
             port = user_input.get(CONF_PORT, DEFAULT_PORT)
-            new_unique_id = _unique_id(host, port)
 
-            if self._is_in_use_by_other_entry(entry, new_unique_id):
+            if host is None:
+                errors[CONF_HOST] = "invalid_host"
+            elif self._is_in_use_by_other_entry(entry, _unique_id(host, port)):
                 return self.async_abort(reason="already_configured")
-
-            try:
-                identity = await _async_probe(host, port)
-            except TeranexConnectionError:
-                errors["base"] = "cannot_connect"
             else:
-                return self.async_update_reload_and_abort(
-                    entry,
-                    unique_id=new_unique_id,
-                    data_updates={CONF_HOST: host, CONF_PORT: port, **identity},
-                )
+                try:
+                    identity = await _async_probe(host, port)
+                except TeranexConnectionError:
+                    errors["base"] = "cannot_connect"
+                else:
+                    return self.async_update_reload_and_abort(
+                        entry,
+                        unique_id=_unique_id(host, port),
+                        data_updates={CONF_HOST: host, CONF_PORT: port, **identity},
+                    )
 
         return self.async_show_form(
             step_id="reconfigure",
@@ -162,18 +180,22 @@ class TeranexOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Edit the output format list as comma separated values."""
+        errors: dict[str, str] = {}
         if user_input is not None:
             modes = [
                 mode.strip()
                 for mode in user_input[CONF_VIDEO_MODES].split(",")
                 if mode.strip()
             ]
-            return self.async_create_entry(data={CONF_VIDEO_MODES: modes})
+            if modes and all(_VIDEO_MODE.fullmatch(mode) for mode in modes):
+                return self.async_create_entry(data={CONF_VIDEO_MODES: modes})
+            errors[CONF_VIDEO_MODES] = "invalid_video_mode"
 
         current = self.config_entry.options.get(
             CONF_VIDEO_MODES, list(DEFAULT_VIDEO_MODES)
         )
-        schema = vol.Schema(
-            {vol.Required(CONF_VIDEO_MODES, default=", ".join(current)): str}
+        default = (
+            user_input[CONF_VIDEO_MODES] if user_input is not None else ", ".join(current)
         )
-        return self.async_show_form(step_id="init", data_schema=schema)
+        schema = vol.Schema({vol.Required(CONF_VIDEO_MODES, default=default): str})
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

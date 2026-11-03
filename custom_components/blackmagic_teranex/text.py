@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 
 from homeassistant.components.text import TextEntity, TextEntityDescription
 from homeassistant.core import HomeAssistant
@@ -16,6 +17,7 @@ from .protocol import BLOCK_ANCILLARY, TeranexClient
 # HH:MM:SS:FF, where the device uses a semicolon before the frames in drop
 # frame formats.
 TIMECODE_PATTERN = r"^\d{2}:\d{2}:\d{2}[:;]\d{2}$"
+_TIMECODE = re.compile(TIMECODE_PATTERN)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -80,10 +82,17 @@ class TeranexText(TeranexEntity, TextEntity):
 
     @property
     def native_value(self) -> str | None:
-        """Return the timecode the device last reported."""
-        return self._client.get(
+        """Return the timecode the device last reported.
+
+        Anything that is not a well-formed timecode is shown as unknown, so a
+        malformed report can never break the entity.
+        """
+        value = self._client.get(
             self.entity_description.block, self.entity_description.field
         )
+        if value is None or not _TIMECODE.fullmatch(value):
+            return None
+        return value
 
     async def async_set_value(self, value: str) -> None:
         """Send the new timecode."""

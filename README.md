@@ -260,7 +260,14 @@ with the unit on and off, the save_preset action, and the protocol parser.
 
 ## Security
 
-The protocol has no authentication or encryption. See [SECURITY.md](SECURITY.md).
+The Teranex protocol has no authentication or encryption, so anyone who can
+reach port 9800 can change the unit. Keep it on a separate network segment
+that only Home Assistant and your own control software can reach.
+
+The integration adds its own safeguards: every value is checked before it is
+sent, everything the unit sends is length- and count-limited, and malformed
+replies lead to a clean reconnect. Details and a recommended firewall setup
+are in [SECURITY.md](SECURITY.md).
 
 ## License
 
