@@ -111,15 +111,28 @@ async def test_new_firmware_is_remembered(
 async def test_changing_options_reloads(
     hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: type[FakeClient]
 ) -> None:
-    """New output formats take effect through a reload."""
+    """New output formats take effect through a reload by the options flow."""
     await _setup(hass, config_entry)
 
-    hass.config_entries.async_update_entry(config_entry, options={CONF_VIDEO_MODES: ["1080p25"]})
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_VIDEO_MODES: "1080p25"}
+    )
     await hass.async_block_till_done()
 
+    assert config_entry.options == {CONF_VIDEO_MODES: ["1080p25"]}
     assert len(fake_client.instances) == 2
     assert fake_client.instances[0].closed
     assert config_entry.state is ConfigEntryState.LOADED
+
+
+async def test_no_update_listener(
+    hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: type[FakeClient]
+) -> None:
+    """The flows reload by themselves; Home Assistant 2026.12 refuses a listener too."""
+    await _setup(hass, config_entry)
+
+    assert not config_entry.update_listeners
 
 
 async def test_unload_closes_connection(

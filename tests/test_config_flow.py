@@ -15,12 +15,12 @@ from custom_components.blackmagic_teranex.const import (
     DOMAIN,
 )
 from custom_components.blackmagic_teranex.protocol import TeranexConnectionError
-from homeassistant.config_entries import SOURCE_USER
+from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType, InvalidData
 
-from .conftest import DEVICE_STATE, HOST, PORT
+from .conftest import DEVICE_STATE, HOST, PORT, FakeClient
 
 
 class ProbeClient:
@@ -166,6 +166,29 @@ async def test_reconfigure_changes_address(
     assert config_entry.data[CONF_MODEL] == "Teranex 2D"
 
 
+async def test_reconfigure_reloads_loaded_entry_once(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    fake_client: type[FakeClient],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A running entry moves to the new address with a single, clean reload."""
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    result = await config_entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_HOST: "192.0.2.20", CONF_PORT: PORT}
+    )
+    await hass.async_block_till_done()
+
+    assert result["reason"] == "reconfigure_successful"
+    assert config_entry.state is ConfigEntryState.LOADED
+    assert [client.host for client in fake_client.instances] == [HOST, "192.0.2.20"]
+    assert "update listener" not in caplog.text
+
+
 async def test_reconfigure_cannot_connect_keeps_old_address(
     hass: HomeAssistant,
     config_entry: MockConfigEntry,
@@ -208,7 +231,7 @@ async def test_reconfigure_rejects_address_of_other_unit(
 
 
 async def test_options_flow_sets_output_formats(
-    hass: HomeAssistant, config_entry: MockConfigEntry
+    hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: type[FakeClient]
 ) -> None:
     """The output format list is stored trimmed and without empty items."""
     config_entry.add_to_hass(hass)
@@ -219,6 +242,7 @@ async def test_options_flow_sets_output_formats(
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {CONF_VIDEO_MODES: " 1080p25, 1080i50 ,, "}
     )
+    await hass.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert config_entry.options == {CONF_VIDEO_MODES: ["1080p25", "1080i50"]}

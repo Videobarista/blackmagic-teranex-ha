@@ -85,18 +85,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: TeranexConfigEntry) -> b
     entry.runtime_data = client
     entry.async_on_unload(client.add_listener(_identity_listener(hass, entry)))
 
-    options_at_setup = dict(entry.options)
-
-    async def _async_entry_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
-        """Reload when the options change.
-
-        The stored identity of the unit also lives in the entry and changes
-        on connect; those updates must not trigger a reload.
-        """
-        if dict(entry.options) != options_at_setup:
-            await hass.config_entries.async_reload(entry.entry_id)
-
-    entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
+    # No update listener on purpose. The options flow and the reconfigure
+    # flow each reload the entry themselves, and Home Assistant refuses that
+    # combination from 2026.12. The stored identity of the unit is updated
+    # on every connect and must never trigger a reload anyway.
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

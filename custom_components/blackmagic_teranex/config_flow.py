@@ -11,7 +11,7 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
-    OptionsFlow,
+    OptionsFlowWithReload,
 )
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
@@ -173,8 +173,11 @@ class TeranexConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class TeranexOptionsFlow(OptionsFlow):
-    """Let the user narrow the list of output formats."""
+class TeranexOptionsFlow(OptionsFlowWithReload):
+    """Let the user narrow the list of output formats.
+
+    Saving reloads the entry, so the new list takes effect straight away.
+    """
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
